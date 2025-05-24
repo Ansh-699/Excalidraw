@@ -1,0 +1,22 @@
+{
+  "name": "web-socket-backend",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@repo/typescript-config": "workspace:^",
+    "@types/ws": "^8.18.1",
+    "ws": "^8.18.2",
+    "@repo/backend-common": "workspace:^",
+    "@repo/common": "workspace:^"
+  },
+  "scripts": {
+    "build": "tsc --b",
+    "dev": "bun run build && bun run start",
+    "start": "bun dist/index.js"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

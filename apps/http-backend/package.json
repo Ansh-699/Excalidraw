@@ -1,0 +1,26 @@
+{
+  "name": "http-backend",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:^",
+    "@types/bun": "latest",
+    "@types/express": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.9",
+    "express": "^5.1.0",
+    "@repo/backend-common": "workspace:^",
+    "@repo/common": "workspace:^"
+  },
+  "scripts": {
+    "build": "tsc --b",
+    "dev": "bun run build && bun run start",
+    "start": "bun dist/index.js"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2"
+  }
+}
