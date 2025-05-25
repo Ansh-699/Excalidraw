@@ -1,6 +1,8 @@
 import { WebSocketServer } from 'ws';
 import jwt from 'jsonwebtoken';
 import { config } from "@repo/backend-common/secret";
+import {prisma} from "@repo/db/clients";
+
 
 const wss = new WebSocketServer({ port: 8081 });
 

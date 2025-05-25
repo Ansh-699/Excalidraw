@@ -9,7 +9,9 @@
     "@types/ws": "^8.18.1",
     "ws": "^8.18.2",
     "@repo/backend-common": "workspace:^",
-    "@repo/common": "workspace:^"
+    "@repo/common": "workspace:^",
+    "@repo/db": "workspace:^"
+
   },
   "scripts": {
     "build": "tsc --b",
