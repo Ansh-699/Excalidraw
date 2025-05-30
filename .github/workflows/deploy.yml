@@ -34,14 +34,13 @@ jobs:
           rsync -avz --delete --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" ./ root@${{ secrets.DROPLET_IP }}:/root/your-app-directory
 
       - name: Run on droplet
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << EOF
             set -e
             cd /root/your-app-directory
-
-            # Export environment variables
-            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
-            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
 
             # Install Node.js and npm if missing
             if ! command -v npm &> /dev/null; then
@@ -54,11 +53,18 @@ jobs:
               npm install -g pm2
             fi
 
-            # Ensure bun is available in PATH
-            export PATH="$HOME/.bun/bin:$PATH"
+            # Install bun if missing
+            if ! command -v bun &> /dev/null; then
+              curl -fsSL https://bun.sh/install | bash
+            fi
 
-            # Restart or start the application with pm2, updating env vars
-            pm2 restart excalidraw --update-env \
-              || pm2 start "bun run start" --name excalidraw
+            # Ensure bun is available in PATH
+            export PATH="\$HOME/.bun/bin:\$PATH"
+
+            # Stop existing process if running
+            pm2 delete excalidraw || true
+
+            # Start the application with pm2 and environment variables
+            DATABASE_URL="${DATABASE_URL}" JWT_SECRET="${JWT_SECRET}" pm2 start "bun run start" --name excalidraw
             pm2 save
           EOF
