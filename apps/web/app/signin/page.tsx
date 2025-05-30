@@ -24,7 +24,7 @@ export default function SigninPage() {
 
         try {
             // Step 1: Sign in
-            const res = await axios.post(`${BACKEND_URL}/signup`, {
+            const res = await axios.post(`${BACKEND_URL}/signin`, {
                 email,
                 password,
             });
