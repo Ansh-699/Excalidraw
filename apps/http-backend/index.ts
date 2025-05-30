@@ -8,13 +8,29 @@ import { prisma } from "@repo/db/clients";
 import { SigninSchema } from "@repo/common/types";
 import { CreateRoomSchema } from "@repo/common/types";
 
-
 import cors from "cors";
 
 const app = express();
-app.use(express.json()); 
-app.use(cors());
+app.use(express.json());
+const allowedOrigins = [
+  "http://142.93.223.72:3000", // frontend IP + port
+  "http://localhost:3000",
+];
 
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like curl, Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 
 app.post("/signup", async (req: Request, res: Response): Promise<void> => {
   const data = CreateUserSchema.safeParse(req.body);
@@ -42,7 +58,9 @@ app.post("/signup", async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    res.status(200).json({ message: "User signed up successfully", userId: user.id });
+    res
+      .status(200)
+      .json({ message: "User signed up successfully", userId: user.id });
   } catch (err) {
     console.error("Signup error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -99,36 +117,38 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-;
+app.post(
+  "/room-id",
+  middleware,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.userid) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
 
-app.post("/room-id", middleware, async (req: Request, res: Response): Promise<void> => {
-  try {
-    if (!req.userid) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
+      const data = CreateRoomSchema.safeParse(req.body);
+      if (!data.success) {
+        res
+          .status(400)
+          .json({ error: "Invalid room data", details: data.error.errors });
+        return;
+      }
+
+      const userid = req.userid;
+      const room = await prisma.room.create({
+        data: {
+          slug: data.data.name,
+          adminId: userid,
+        },
+      });
+      res.status(200).json({ roomId: room.id, userId: req.userid });
+    } catch (err) {
+      console.error("Error creating room:", err);
+      res.status(500).json({ error: "Internal server error" });
     }
-
-    const data = CreateRoomSchema.safeParse(req.body);
-    if (!data.success) {
-      res.status(400).json({ error: "Invalid room data", details: data.error.errors });
-      return;
-    }
-
-    const userid = req.userid;
-    const room = await prisma.room.create({
-      data: {
-        slug: data.data.name,
-        adminId: userid,
-      },
-    });
-    res.status(200).json({ roomId: room.id, userId: req.userid });
-  } catch (err) {
-    console.error("Error creating room:", err);
-    res.status(500).json({ error: "Internal server error" });
   }
-});
-
-
+);
 
 app.get("/chats/:roomId", async (req, res) => {
   try {
@@ -138,9 +158,9 @@ app.get("/chats/:roomId", async (req, res) => {
         roomId,
       },
       orderBy: {
-        id: "desc"
+        id: "desc",
       },
-      take: 1000
+      take: 1000,
     });
 
     res.json({ messages });
@@ -154,8 +174,8 @@ app.get("/room/:slug", async (req, res) => {
   const slug = req.params.slug;
   const room = await prisma.room.findFirst({
     where: {
-      slug
-    }
+      slug,
+    },
   });
 
   res.json({ room });
@@ -166,15 +186,15 @@ app.get("/shapes/:roomId", async (req, res) => {
   try {
     const roomId = req.params.roomId;
 
-  const shapes = await prisma.chat.findMany({
-where: {
-  roomId,
-  shape: {
-    not: {
-      equals: null
-    }
-  }
-},
+    const shapes = await prisma.chat.findMany({
+      where: {
+        roomId,
+        shape: {
+          not: {
+            equals: null,
+          },
+        },
+      },
       select: {
         id: true,
         shape: true,
@@ -182,8 +202,8 @@ where: {
         userId: true,
       },
       orderBy: {
-        createdAt: "asc"
-      }
+        createdAt: "asc",
+      },
     });
 
     res.status(200).json(shapes);
@@ -193,7 +213,6 @@ where: {
   }
 });
 
-app.listen(3001, '0.0.0.0', () => {
-  console.log('Backend listening on port 3001');
+app.listen(3001, "0.0.0.0", () => {
+  console.log("Backend listening on port 3001");
 });
-
