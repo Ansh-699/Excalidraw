@@ -18,25 +18,20 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.DEPLOY_KEY }}
 
-      - name: Install Bun (on CI)
+      - name: Install Bun
         run: |
           curl -fsSL https://bun.sh/install | bash
           echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies (on CI)
+      - name: Install dependencies
         run: bun install
 
-      - name: Build project (on CI)
+      - name: Build project
         run: bun run build
 
       - name: Sync files to droplet
         run: |
-          rsync -avz --delete \
-            --exclude='.git' \
-            --exclude='node_modules' \
-            --exclude='.env' \
-            -e "ssh -o StrictHostKeyChecking=no" \
-            ./ root@${{ secrets.DROPLET_IP }}:/root/excalidraw
+          rsync -avz --delete --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" ./ root@${{ secrets.DROPLET_IP }}:/root/excalidraw
 
       - name: Deploy and run on droplet
         env:
@@ -47,6 +42,10 @@ jobs:
             set -e
             cd /root/excalidraw
 
+            # Fix ownership and permissions
+            chown -R root:root .
+            chmod -R u+rwX .
+
             # Ensure system dependencies are present
             apt-get update
             apt-get install -y curl nodejs npm
@@ -56,29 +55,28 @@ jobs:
               npm install -g pm2
             fi
 
-            # Install bun if missing and symlink to system path
+            # Install bun if missing and link to PATH
             if ! command -v bun &> /dev/null; then
               curl -fsSL https://bun.sh/install | bash
               ln -sf /root/.bun/bin/bun /usr/local/bin/bun
             fi
 
-            # Verify bun is available
+            # Verify bun installed
             if ! command -v bun &> /dev/null; then
               echo "❌ Bun installation failed"
               exit 1
             fi
 
-            # Install app dependencies on droplet
+            # Install dependencies on the droplet
             bun install
 
-            # Stop previous process if exists
+            # Stop existing PM2 app if running
             pm2 delete excalidraw || true
 
-            # Start the app
+            # Start the app with Bun using PM2
             DATABASE_URL="${DATABASE_URL}" \
             JWT_SECRET="${JWT_SECRET}" \
             pm2 start bun --name excalidraw --cwd /root/excalidraw -- run start
 
-            # Save the process list
             pm2 save
           EOF
