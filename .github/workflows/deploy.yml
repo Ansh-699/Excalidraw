@@ -18,60 +18,67 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.DEPLOY_KEY }}
 
-      - name: Install Bun
+      - name: Install Bun (on CI)
         run: |
           curl -fsSL https://bun.sh/install | bash
           echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies
+      - name: Install dependencies (on CI)
         run: bun install
 
-      - name: Build project
+      - name: Build project (on CI)
         run: bun run build
 
       - name: Sync files to droplet
         run: |
-          rsync -avz --delete --exclude='.git' --exclude='node_modules' --exclude='.env' \
-            -e "ssh -o StrictHostKeyChecking=no" ./ root@${{ secrets.DROPLET_IP }}:/root/your-app-directory
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            ./ root@${{ secrets.DROPLET_IP }}:/root/excalidraw
 
-      - name: Run on droplet
+      - name: Deploy and run on droplet
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << 'EOF'
             set -e
-            cd /root/your-app-directory
+            cd /root/excalidraw
 
-            # Ensure system dependencies
-            if ! command -v apt-get &> /dev/null; then
-              echo "apt-get not found. Are you on a minimal OS?"
-              exit 1
-            fi
+            # Ensure system dependencies are present
+            apt-get update
+            apt-get install -y curl nodejs npm
 
-            if ! command -v npm &> /dev/null; then
-              apt-get update && apt-get install -y nodejs npm
-            fi
-
+            # Install pm2 if missing
             if ! command -v pm2 &> /dev/null; then
               npm install -g pm2
             fi
 
+            # Install bun if missing and symlink to system path
             if ! command -v bun &> /dev/null; then
               curl -fsSL https://bun.sh/install | bash
+              ln -sf /root/.bun/bin/bun /usr/local/bin/bun
             fi
 
-            export PATH="/root/.bun/bin:$PATH"
+            # Verify bun is available
+            if ! command -v bun &> /dev/null; then
+              echo "❌ Bun installation failed"
+              exit 1
+            fi
 
-            # Stop old process
+            # Install app dependencies on droplet
+            bun install
+
+            # Stop previous process if exists
             pm2 delete excalidraw || true
 
-            # Start new process with working directory
+            # Start the app
             DATABASE_URL="${DATABASE_URL}" \
             JWT_SECRET="${JWT_SECRET}" \
-            pm2 start "/root/.bun/bin/bun run start" \
-              --name excalidraw \
-              --cwd /root/your-app-directory
+            pm2 start bun --name excalidraw --cwd /root/excalidraw -- run start
 
+            # Save the process list
             pm2 save
           EOF
