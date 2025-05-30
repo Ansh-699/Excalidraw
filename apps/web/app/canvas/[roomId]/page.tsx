@@ -22,20 +22,19 @@ export default function Canvas() {
       clicked = true;
     };
 
-   const handleMouseUp = (event: MouseEvent) => {
-  if (!clicked) return;
-  clicked = false;
+    const handleMouseUp = (event: MouseEvent) => {
+      if (!clicked) return;
+      clicked = false;
 
-  const rect = canvas.getBoundingClientRect();
-  const endX = event.clientX - rect.left;
-  const endY = event.clientY - rect.top;
-  const width = endX - startX;
-  const height = endY - startY;
+      const rect = canvas.getBoundingClientRect();
+      const endX = event.clientX - rect.left;
+      const endY = event.clientY - rect.top;
+      const width = endX - startX;
+      const height = endY - startY;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeRect(startX, startY, width, height);
-};
-
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeRect(startX, startY, width, height);
+    };
 
     const handleMouseMove = (event: MouseEvent) => {
       if (clicked) {
@@ -55,7 +54,6 @@ export default function Canvas() {
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
 
-    //   ctx.strokeRect(x - 10, y - 10, 20, 20);
     };
 
     canvas.addEventListener("mousedown", handleMouseDown);
@@ -69,15 +67,15 @@ export default function Canvas() {
       canvas.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("click", handleClick);
     };
-  }, []);
+  }, [canvasRef]);
 
   return (
     <div>
       <canvas
         ref={canvasRef}
         id="canvas"
-        width={2000}
-        height={1920}
+        width={window.innerWidth}
+        height={window.innerHeight}
         style={{
           border: "1px solid black",
           cursor: "crosshair",
