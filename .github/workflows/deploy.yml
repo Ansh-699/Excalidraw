@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Set up SSH
+      - name: Set up SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_KEY }}
@@ -23,28 +23,35 @@ jobs:
           curl -fsSL https://bun.sh/install | bash
           echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build project
-        run: bun run build
+      - name: Install dependencies & build
+        run: |
+          bun install
+          bun run build
 
       - name: Sync files to droplet
         run: |
-          rsync -avz --delete --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" ./ root@${{ secrets.DROPLET_IP }}:/root/your-app-directory
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            ./ root@${{ secrets.DROPLET_IP }}:/root/your-app-directory
 
-      - name: Run on droplet
+      - name: Run deployment on droplet
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET:   ${{ secrets.JWT_SECRET }}
         run: |
-          ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << EOF
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << 'EOF'
             set -e
             cd /root/your-app-directory
 
-            # Install Node.js and npm if missing
+            # Put Bun in PATH
+            export PATH="\$HOME/.bun/bin:\$PATH"
+
+            # Install Node.js & npm if missing (for pm2)
             if ! command -v npm &> /dev/null; then
-              apt-get update
+              apt-get update -y
               apt-get install -y nodejs npm
             fi
 
@@ -53,18 +60,23 @@ jobs:
               npm install -g pm2
             fi
 
-            # Install bun if missing
+            # Ensure bun is available
             if ! command -v bun &> /dev/null; then
               curl -fsSL https://bun.sh/install | bash
+              export PATH="\$HOME/.bun/bin:\$PATH"
             fi
 
-            # Ensure bun is available in PATH
-            export PATH="\$HOME/.bun/bin:\$PATH"
+            # Remove old process (ignore errors)
+            pm2 delete excalidar || true
 
-            # Stop existing process if running
-            pm2 delete excalidraw || true
+            # Start new process from correct cwd with updated env
+            pm2 start "\$HOME/.bun/bin/bun" \
+              --name excalidar \
+              --cwd /root/your-app-directory \
+              -- run start \
+              --update-env \
+              --no-daemon
 
-            # Start the application with pm2 and environment variables
-            DATABASE_URL="${DATABASE_URL}" JWT_SECRET="${JWT_SECRET}" pm2 start "bun run start" --name excalidraw
+            # Persist
             pm2 save
           EOF
