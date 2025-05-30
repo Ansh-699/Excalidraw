@@ -1,6 +1,6 @@
 // utils/shapes.ts
 import axios from "axios";
-import { BACKEND_URL } from "./config";
+
 import { v4 as uuidv4 } from "uuid";
 
 export type ShapeType =
@@ -15,6 +15,11 @@ export interface BaseShape {
   type: ShapeType;
 }
 
+
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const BACKEND_URL = isLocalhost ? "http://localhost:3001" : "http://142.93.223.72:3001";
+
+    
 export interface RectShape extends BaseShape {
   type: "rectangle";
   x: number;

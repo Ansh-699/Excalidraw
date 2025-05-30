@@ -193,6 +193,7 @@ where: {
   }
 });
 
-app.listen(3001, () => {
-  console.log("HTTP backend is running on port 3001");
+app.listen(3001, '0.0.0.0', () => {
+  console.log('Backend listening on port 3001');
 });
+

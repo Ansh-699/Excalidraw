@@ -10,6 +10,10 @@ export default function SigninPage() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    const BACKEND_URL = isLocalhost ? "http://localhost:3001" : "http://142.93.223.72:3001";
+
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -18,7 +22,7 @@ export default function SigninPage() {
 
         try {
             // Step 1: Sign in
-            const res = await axios.post("http://localhost:3001/signin", {
+            const res = await axios.post(`${BACKEND_URL}/signup`, {
                 email,
                 password,
             });
@@ -34,7 +38,7 @@ export default function SigninPage() {
 
             // Step 2: Request room ID
             const roomRes = await axios.post(
-                "http://localhost:3001/room-id",
+                "http://142.93.223.72:3001/room-id",
                 { name: `My Room ${Date.now().toString().slice(-4)}` },
 
                 {
