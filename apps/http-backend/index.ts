@@ -14,33 +14,11 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// const allowedOrigins = [
-//   "http://142.93.223.72:3000", // frontend IP + port
-//   "http://localhost:3000",
-// ];
 
-// const corsOptions = {
-//   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-//     if (!origin) {
-//       console.log("CORS: no origin (non-browser request) allowed");
-//       return callback(null, true);
-//     }
-//     if (allowedOrigins.includes(origin)) {
-//       console.log(`CORS: allowed origin ${origin}`);
-//       callback(null, true);
-//     } else {
-//       console.log(`CORS: blocked origin ${origin}`);
-//       callback(new Error("Not allowed by CORS"), false);
-//     }
-//   },
-//   credentials: true,
-// };
-
-// app.use(cors(corsOptions));
-
-// app.options("*", cors(corsOptions));
 
 app.post("/signup", async (req: Request, res: Response): Promise<void> => {
+console.log("JWT Secret:", config.jwtSecret ? "Set" : "NOT SET");
+
   const data = CreateUserSchema.safeParse(req.body);
 
   if (!data.success) {
