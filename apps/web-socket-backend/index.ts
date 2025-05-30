@@ -62,56 +62,82 @@ wss.on("connection", (ws, request) => {
       parsedData = JSON.parse(raw);
     } catch (err) {
       console.error("Invalid JSON received:", data.toString());
-      ws.send(JSON.stringify({ type: "error", message: "Invalid JSON format" }));
+      ws.send(
+        JSON.stringify({ type: "error", message: "Invalid JSON format" })
+      );
       return;
     }
 
-    const user = users.find(x => x.ws === ws);
+    const user = users.find((x) => x.ws === ws);
     if (!user) return;
 
     switch (parsedData.type) {
       case "join_room": {
-        // Try to find the room, if not exist create one with default admin as userId
-        let room = await prisma.room.findUnique({ where: { id: parsedData.roomId } });
-        if (!room) {
-          room = await prisma.room.create({
-            data: {
-              id: parsedData.roomId,
-              slug: parsedData.slug || parsedData.roomId, // fallback slug
-              adminId: user.userId,
-            }
-          });
-          console.log(`Created new room ${room.id} with admin ${room.adminId}`);
-        }
-        if (!user.rooms.includes(room.id)) {
-          user.rooms.push(room.id);
-        }
-        ws.send(JSON.stringify({ type: "joined_room", roomId: room.id }));
-        break;
-      }
+        const { roomId, slug } = parsedData;
 
-      case "leave_room":
-        user.rooms = user.rooms.filter(x => x !== parsedData.roomId);
-        ws.send(JSON.stringify({ type: "left_room", roomId: parsedData.roomId }));
-        break;
-
-      case "chat": {
-        const { roomId, message } = parsedData;
-
-        // Check room exists or create if not
         let room = await prisma.room.findUnique({ where: { id: roomId } });
         if (!room) {
           room = await prisma.room.create({
             data: {
               id: roomId,
-              slug: roomId,  // fallback slug as roomId
+              slug: slug || roomId,
               adminId: user.userId,
-            }
+            },
           });
-          console.log(`Created new room ${room.id} for chat with admin ${room.adminId}`);
+          console.log(`Created new room ${room.id} with admin ${room.adminId}`);
         }
 
-        // Create chat message
+        if (!user.rooms.includes(room.id)) {
+          user.rooms.push(room.id);
+        }
+
+        const existingShapes = await prisma.chat.findMany({
+          where: {
+            roomId: room.id,
+            shape: {
+              not: {  
+                equals: null,
+              },
+            },
+          },
+          orderBy: { createdAt: "asc" },
+        });
+
+        // Send the existing shapes back to the client
+        ws.send(
+          JSON.stringify({
+            type: "existing_shapes",
+            roomId: room.id,
+            shapes: existingShapes.map((chat) => chat.shape),
+          })
+        );
+
+        ws.send(JSON.stringify({ type: "joined_room", roomId: room.id }));
+        break;
+      }
+
+      case "leave_room": {
+        user.rooms = user.rooms.filter((x) => x !== parsedData.roomId);
+        ws.send(
+          JSON.stringify({ type: "left_room", roomId: parsedData.roomId })
+        );
+        break;
+      }
+
+      case "chat": {
+        const { roomId, message } = parsedData;
+
+        let room = await prisma.room.findUnique({ where: { id: roomId } });
+        if (!room) {
+          room = await prisma.room.create({
+            data: {
+              id: roomId,
+              slug: roomId,
+              adminId: user.userId,
+            },
+          });
+        }
+
         await prisma.chat.create({
           data: {
             roomId: room.id,
@@ -120,20 +146,73 @@ wss.on("connection", (ws, request) => {
           },
         });
 
-        // Broadcast chat message to users in room
-        users.forEach(u => {
+        users.forEach((u) => {
           if (u.rooms.includes(room.id)) {
-            u.ws.send(JSON.stringify({
-              type: "chat",
-              message,
-              roomId: room.id,
-              userId: user.userId,
-            }));
+            u.ws.send(
+              JSON.stringify({
+                type: "chat",
+                message,
+                roomId: room.id,
+                userId: user.userId,
+              })
+            );
           }
         });
         break;
       }
+
+      case "drawing": {
+        const { roomId, shape } = parsedData;
+
+        let room = await prisma.room.findUnique({ where: { id: roomId } });
+        if (!room) {
+          room = await prisma.room.create({
+            data: {
+              id: roomId,
+              slug: roomId,
+              adminId: user.userId,
+            },
+          });
+        }
+
+        // Save drawing shape in DB before broadcasting
+        await prisma.chat.create({
+          data: {
+            roomId: room.id,
+            shape,
+            userId: user.userId,
+            message: "", // no text message for drawings
+          },
+        });
+
+        // Broadcast to all users in the room including sender
+        users.forEach((u) => {
+          if (u.rooms.includes(room.id)) {
+            u.ws.send(
+              JSON.stringify({
+                type: "drawing",
+                shape,
+                roomId: room.id,
+                userId: user.userId,
+              })
+            );
+          }
+        });
+        break;
+      }
+
+      default:
+        ws.send(
+          JSON.stringify({ type: "error", message: "Unknown message type" })
+        );
+        break;
+    }
+  });
+
+  ws.on("close", () => {
+    const index = users.findIndex((u) => u.ws === ws);
+    if (index !== -1) {
+      users.splice(index, 1);
     }
   });
 });
-;

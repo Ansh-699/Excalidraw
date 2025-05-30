@@ -38,6 +38,7 @@ model Chat {
   id        Int   @id @default(autoincrement())
   roomId    String
   message   String
+  shape     Json? 
   userId    String
   user      User   @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())

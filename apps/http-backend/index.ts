@@ -5,11 +5,11 @@ import { config } from "@repo/backend-common/secret";
 import { middleware } from "./middleware.js";
 import { CreateUserSchema } from "@repo/common/types";
 import { prisma } from "@repo/db/clients";
-import {SigninSchema} from "@repo/common/types";
-import {CreateRoomSchema} from "@repo/common/types";
+import { SigninSchema } from "@repo/common/types";
+import { CreateRoomSchema } from "@repo/common/types";
 
 const app = express();
-app.use(express.json()); // Enable JSON body parsing
+app.use(express.json()); 
 
 app.post("/signup", async (req: Request, res: Response): Promise<void> => {
   const data = CreateUserSchema.safeParse(req.body);
@@ -37,10 +37,7 @@ app.post("/signup", async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    res.status(200).json({ message: "User signed up successfully"
-      , userId: user.id
-     });
-   
+    res.status(200).json({ message: "User signed up successfully", userId: user.id });
   } catch (err) {
     console.error("Signup error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -52,7 +49,6 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
 
   if (!email || !password) {
     res.status(400).json({ error: "Missing email or password" });
-
     return;
   }
   const data = SigninSchema.safeParse({ username: email, password });
@@ -76,13 +72,12 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
     const token = jwt.sign({ userid: user.id }, config.jwtSecret, {
       expiresIn: "1h",
     });
-  res.status(200).json({ message: "Sign in successful", token });
+    res.status(200).json({ message: "Sign in successful", token });
   } catch (err) {
-  console.error("Signin error:", err);
-  res.status(500).json({ error: "Internal server error" });
+    console.error("Signin error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 app.post("/room-id", middleware, async (req: Request, res: Response): Promise<void> => {
   if (!req.userid) {
@@ -95,16 +90,79 @@ app.post("/room-id", middleware, async (req: Request, res: Response): Promise<vo
     return;
   }
 
-  const userid= req.userid;
-  await prisma.room.create({
+  const userid = req.userid;
+  const room = await prisma.room.create({
     data: {
-      slug : data.data.name,
+      slug: data.data.name,
       adminId: userid,
     }
   });
-  res.status(200).json({ roomId: "12345", userId: req.userid });
+  res.status(200).json({ roomId: room.id, userId: req.userid });
 });
 
-app.listen(3000, () => {
-  console.log("HTTP backend is running on port 3000");
+app.get("/chats/:roomId", async (req, res) => {
+  try {
+    const roomId = req.params.roomId;
+    const messages = await prisma.chat.findMany({
+      where: {
+        roomId,
+      },
+      orderBy: {
+        id: "desc"
+      },
+      take: 1000
+    });
+
+    res.json({ messages });
+  } catch (e) {
+    console.log(e);
+    res.json({ messages: [] });
+  }
+});
+
+app.get("/room/:slug", async (req, res) => {
+  const slug = req.params.slug;
+  const room = await prisma.room.findFirst({
+    where: {
+      slug
+    }
+  });
+
+  res.json({ room });
+});
+
+// NEW endpoint to fetch all shapes for a room, ordered oldest to newest
+app.get("/shapes/:roomId", async (req, res) => {
+  try {
+    const roomId = req.params.roomId;
+
+  const shapes = await prisma.chat.findMany({
+where: {
+  roomId,
+  shape: {
+    not: {
+      equals: null
+    }
+  }
+},
+      select: {
+        id: true,
+        shape: true,
+        createdAt: true,
+        userId: true,
+      },
+      orderBy: {
+        createdAt: "asc"
+      }
+    });
+
+    res.status(200).json(shapes);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch shapes" });
+  }
+});
+
+app.listen(3001, () => {
+  console.log("HTTP backend is running on port 3001");
 });
