@@ -16,6 +16,41 @@ app.use(cors());
 
 
 
+app.post("/signup", async (req: Request, res: Response): Promise<void> => {
+console.log("JWT Secret:", config.jwtSecret ? "Set" : "NOT SET");
+
+  const data = CreateUserSchema.safeParse(req.body);
+
+  if (!data.success) {
+    res.status(400).json({ error: "Invalid user data" });
+    return;
+  }
+
+  const { username, email, password } = data.data;
+
+  try {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      res.status(400).json({ error: "User already exists" });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        name: username,
+        email,
+        password: hashedPassword,
+      },
+    });
+
+    res.status(200).json({ message: "User signed up successfully", userId: user.id });
+  } catch (err) {
+    console.error("Signup error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 app.post("/signin", async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
@@ -70,56 +105,6 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-
-app.post("/signin", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, password } = req.body;
-
-    if (typeof email !== "string" || typeof password !== "string") {
-      res.status(400).json({ error: "Email and password must be strings" });
-      return;
-    }
-    if (!email.trim() || !password.trim()) {
-      res.status(400).json({ error: "Missing email or password" });
-      return;
-    }
-
-    // If your SigninSchema expects 'username', but you use email, consider changing schema or here:
-    const data = SigninSchema.safeParse({ username: email, password });
-    if (!data.success) {
-      res.status(400).json({ error: "Invalid credentials format" });
-      return;
-    }
-
-    const user = await prisma.user.findUnique({ where: { email } });
-
-    if (!user || !user.password) {
-      res.status(401).json({ error: "Invalid credentials" });
-      return;
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      res.status(401).json({ error: "Invalid credentials" });
-      return;
-    }
-
-    if (!config.jwtSecret) {
-      console.error("JWT secret is not set");
-      res.status(500).json({ error: "Internal server error" });
-      return;
-    }
-
-    const token = jwt.sign({ userid: user.id }, config.jwtSecret, {
-      expiresIn: "1h",
-    });
-
-    res.status(200).json({ message: "Sign in successful", token });
-  } catch (err) {
-    console.error("Signin error:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
 
 app.post("/room-id", middleware, async (req: Request, res: Response): Promise<void> => {
   try {
