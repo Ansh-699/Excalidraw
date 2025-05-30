@@ -88,13 +88,8 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    if (!config.jwtSecret) {
-      console.error("JWT secret is not set");
-      res.status(500).json({ error: "Internal server error" });
-      return;
-    }
-
-    const token = jwt.sign({ userid: user.id }, config.jwtSecret, {
+    // Hardcoded JWT secret
+    const token = jwt.sign({ userid: user.id }, "anshtyagi", {
       expiresIn: "1h",
     });
 
@@ -104,6 +99,7 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 
 app.post("/room-id", middleware, async (req: Request, res: Response): Promise<void> => {
