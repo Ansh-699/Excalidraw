@@ -31,9 +31,7 @@ jobs:
 
       - name: Sync files to droplet
         run: |
-          rsync -avz --delete --exclude='.git' \
-            -e "ssh -o StrictHostKeyChecking=no" \
-            ./ root@${{ secrets.DROPLET_IP }}:/root/your-app-directory
+          rsync -avz --delete --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" ./ root@${{ secrets.DROPLET_IP }}:/root/your-app-directory
 
       - name: Run on droplet
         run: |
@@ -57,12 +55,10 @@ jobs:
             fi
 
             # Ensure bun is available in PATH
-            export PATH="\$HOME/.bun/bin:\$PATH"
+            export PATH="$HOME/.bun/bin:$PATH"
 
-            # Restart if running, otherwise start from the correct cwd
-            pm2 restart excalidar --update-env \
-              || pm2 start bun --name excalidar --cwd /root/your-app-directory -- run start
-
-            # Persist the process list
+            # Restart or start the application with pm2, updating env vars
+            pm2 restart excalidraw --update-env \
+              || pm2 start "bun run start" --name excalidraw
             pm2 save
           EOF
