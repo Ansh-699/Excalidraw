@@ -65,7 +65,7 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const data = SigninSchema.safeParse({ username: email, password });
+const data = SigninSchema.safeParse({ email, password });
     if (!data.success) {
       console.error("SigninSchema error:", data.error);
       res.status(400).json({ error: "Invalid credentials format" });
