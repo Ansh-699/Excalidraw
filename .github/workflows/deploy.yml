@@ -37,7 +37,7 @@ jobs:
             -e "ssh -o StrictHostKeyChecking=no" \
             ./ root@${{ secrets.DROPLET_IP }}:/root/your-app-directory
 
-      - name: Run deployment on droplet
+      - name: Run deployment on droplet (no PM2)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JWT_SECRET:   ${{ secrets.JWT_SECRET }}
@@ -46,37 +46,25 @@ jobs:
             set -e
             cd /root/your-app-directory
 
-            # Put Bun in PATH
+            # Export env vars
+            export DATABASE_URL="${DATABASE_URL}"
+            export JWT_SECRET="${JWT_SECRET}"
+
+            # Ensure bun is in PATH
             export PATH="\$HOME/.bun/bin:\$PATH"
 
-            # Install Node.js & npm if missing (for pm2)
+            # Kill old instance (if any)
+            pkill -f "bun run start" || true
+
+            # Install Node.js and npm if missing (for process management or builds)
             if ! command -v npm &> /dev/null; then
-              apt-get update -y
-              apt-get install -y nodejs npm
+              apt update -y
+              apt install -y nodejs npm
             fi
 
-            # Install pm2 if missing
-            if ! command -v pm2 &> /dev/null; then
-              npm install -g pm2
-            fi
+            # Start the app in the background with nohup
+            nohup bun run start > /root/your-app-directory/app.log 2>&1 &
 
-            # Ensure bun is available
-            if ! command -v bun &> /dev/null; then
-              curl -fsSL https://bun.sh/install | bash
-              export PATH="\$HOME/.bun/bin:\$PATH"
-            fi
-
-            # Remove old process (ignore errors)
-            pm2 delete excalidar || true
-
-            # Start new process from correct cwd with updated env
-            pm2 start "\$HOME/.bun/bin/bun" \
-              --name excalidar \
-              --cwd /root/your-app-directory \
-              -- run start \
-              --update-env \
-              --no-daemon
-
-            # Persist
-            pm2 save
+            # Save its PID for later if you like
+            echo \$! > /root/your-app-directory/app.pid
           EOF
