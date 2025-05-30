@@ -12,25 +12,34 @@ import cors from "cors";
 
 const app = express();
 app.use(express.json());
+
 const allowedOrigins = [
   "http://142.93.223.72:3000", // frontend IP + port
   "http://localhost:3000",
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like curl, Postman)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like curl, Postman)
+    if (!origin) {
+      console.log("CORS: no origin (non-browser request) allowed");
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      console.log(`CORS: allowed origin ${origin}`);
+      callback(null, true);
+    } else {
+      console.log(`CORS: blocked origin ${origin}`);
+      callback(new Error("Not allowed by CORS"), false);
+    }
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
+// Explicitly handle preflight OPTIONS requests for all routes
+app.options("*", cors(corsOptions));
 
 app.post("/signup", async (req: Request, res: Response): Promise<void> => {
   const data = CreateUserSchema.safeParse(req.body);
@@ -58,9 +67,7 @@ app.post("/signup", async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    res
-      .status(200)
-      .json({ message: "User signed up successfully", userId: user.id });
+    res.status(200).json({ message: "User signed up successfully", userId: user.id });
   } catch (err) {
     console.error("Signup error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -80,7 +87,7 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Adjust your schema to expect email instead of username (or update accordingly)
+    // If your SigninSchema expects 'username', but you use email, consider changing schema or here:
     const data = SigninSchema.safeParse({ username: email, password });
     if (!data.success) {
       res.status(400).json({ error: "Invalid credentials format" });
@@ -90,7 +97,6 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user || !user.password) {
-      // user or password field missing
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
@@ -117,38 +123,33 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-app.post(
-  "/room-id",
-  middleware,
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      if (!req.userid) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-      }
 
-      const data = CreateRoomSchema.safeParse(req.body);
-      if (!data.success) {
-        res
-          .status(400)
-          .json({ error: "Invalid room data", details: data.error.errors });
-        return;
-      }
-
-      const userid = req.userid;
-      const room = await prisma.room.create({
-        data: {
-          slug: data.data.name,
-          adminId: userid,
-        },
-      });
-      res.status(200).json({ roomId: room.id, userId: req.userid });
-    } catch (err) {
-      console.error("Error creating room:", err);
-      res.status(500).json({ error: "Internal server error" });
+app.post("/room-id", middleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.userid) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
     }
+
+    const data = CreateRoomSchema.safeParse(req.body);
+    if (!data.success) {
+      res.status(400).json({ error: "Invalid room data", details: data.error.errors });
+      return;
+    }
+
+    const userid = req.userid;
+    const room = await prisma.room.create({
+      data: {
+        slug: data.data.name,
+        adminId: userid,
+      },
+    });
+    res.status(200).json({ roomId: room.id, userId: req.userid });
+  } catch (err) {
+    console.error("Error creating room:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
-);
+});
 
 app.get("/chats/:roomId", async (req, res) => {
   try {
@@ -165,20 +166,25 @@ app.get("/chats/:roomId", async (req, res) => {
 
     res.json({ messages });
   } catch (e) {
-    console.log(e);
+    console.error(e);
     res.json({ messages: [] });
   }
 });
 
 app.get("/room/:slug", async (req, res) => {
-  const slug = req.params.slug;
-  const room = await prisma.room.findFirst({
-    where: {
-      slug,
-    },
-  });
+  try {
+    const slug = req.params.slug;
+    const room = await prisma.room.findFirst({
+      where: {
+        slug,
+      },
+    });
 
-  res.json({ room });
+    res.json({ room });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // NEW endpoint to fetch all shapes for a room, ordered oldest to newest
