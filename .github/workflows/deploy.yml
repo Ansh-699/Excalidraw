@@ -64,8 +64,12 @@ jobs:
             # Reinstall project dependencies
             bun install
 
-            # Generate Prisma client
-            bun prisma generate
+            # Generate Prisma client in correct directory with schema path
+            cd packages/db
+            bun prisma generate --schema=./prisma/schema.prisma
+
+            # Go back to project root
+            cd /root/excalidraw
 
             # Stop any previous apps
             pm2 delete all || true
