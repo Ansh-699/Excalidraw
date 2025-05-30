@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import ToolPanel from "./components/ToolPanel";
 
 const CanvasBoard = dynamic(() => import("./components/CanvasBoard"), { ssr: false });
 
-export default function RoomCanvasPage({ params }: { params: { roomId: string } }) {
+export default function RoomCanvasPage() {
+  const params = useParams();
+  const roomId = Array.isArray(params?.roomId) ? params?.roomId[0] : params?.roomId || "";
+
   const [tool, setTool] = useState<"rectangle" | "circle" | "triangle" | "pencil" | "eraser">("rectangle");
   const [joinRoomId, setJoinRoomId] = useState("");
   const router = useRouter();
@@ -26,6 +29,8 @@ export default function RoomCanvasPage({ params }: { params: { roomId: string } 
     }
   };
 
+  if (!roomId) return <div>Invalid room</div>;
+
   return (
     <div>
       {/* Room Join Form */}
@@ -40,9 +45,9 @@ export default function RoomCanvasPage({ params }: { params: { roomId: string } 
         <button type="submit">Join Room</button>
       </form>
 
-      {/* Your existing canvas and tools */}
+      {/* Tool panel and Canvas */}
       <ToolPanel currentTool={tool} onSelect={setTool} />
-      <CanvasBoard roomId={params.roomId} currentTool={tool} />
+      <CanvasBoard roomId={roomId} currentTool={tool} />
     </div>
   );
 }
