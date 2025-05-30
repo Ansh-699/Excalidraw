@@ -64,6 +64,9 @@ jobs:
             # Reinstall project dependencies
             bun install
 
+            # Generate Prisma client
+            bun prisma generate
+
             # Stop any previous apps
             pm2 delete all || true
 
