@@ -1,6 +1,6 @@
 // components/ToolPanel.tsx
 import React from "react";
-import { Square, Circle, Triangle, Pencil } from "lucide-react";
+import { Square, Circle, Triangle, Pencil, Eraser } from "lucide-react";
 import { ShapeType } from "../utils/shapes";
 
 interface ToolPanelProps {
@@ -13,10 +13,11 @@ const toolIcons = {
     circle: Circle,
     triangle: Triangle,
     pencil: Pencil,
+    eraser: Eraser,
 };
 
 export default function ToolPanel({ currentTool, onSelect }: ToolPanelProps) {
-    const tools: ShapeType[] = ["rectangle", "circle", "triangle", "pencil"];
+    const tools: ShapeType[] = ["rectangle", "circle", "triangle", "pencil", "eraser"];
     
     return (
         <nav style={{

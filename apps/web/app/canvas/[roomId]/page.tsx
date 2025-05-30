@@ -8,7 +8,7 @@ import ToolPanel from "./components/ToolPanel";
 const CanvasBoard = dynamic(() => import("./components/CanvasBoard"), { ssr: false });
 
 export default function RoomCanvasPage({ params }: { params: { roomId: string } }) {
-  const [tool, setTool] = useState<"rectangle" | "circle" | "triangle" | "pencil">("rectangle");
+  const [tool, setTool] = useState<"rectangle" | "circle" | "triangle" | "pencil" | "eraser">("rectangle");
   const [joinRoomId, setJoinRoomId] = useState("");
   const router = useRouter();
 
