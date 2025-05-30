@@ -46,7 +46,7 @@ jobs:
             chown -R root:root .
             chmod -R u+rwX .
 
-            # Ensure system dependencies are present
+            # Ensure system dependencies
             apt-get update
             apt-get install -y curl nodejs npm
 
@@ -55,28 +55,27 @@ jobs:
               npm install -g pm2
             fi
 
-            # Install bun if missing and link to PATH
+            # Install bun if missing
             if ! command -v bun &> /dev/null; then
               curl -fsSL https://bun.sh/install | bash
               ln -sf /root/.bun/bin/bun /usr/local/bin/bun
             fi
 
-            # Verify bun installed
-            if ! command -v bun &> /dev/null; then
-              echo "❌ Bun installation failed"
-              exit 1
-            fi
-
-            # Install dependencies on the droplet
+            # Reinstall project dependencies
             bun install
 
-            # Stop existing PM2 app if running
-            pm2 delete excalidraw || true
+            # Stop any previous apps
+            pm2 delete all || true
 
-            # Start the app with Bun using PM2
-            DATABASE_URL="${DATABASE_URL}" \
-            JWT_SECRET="${JWT_SECRET}" \
-            pm2 start bun --name excalidraw --cwd /root/excalidraw -- run start
+            # Start frontend (Next.js)
+            pm2 start bun --name frontend --cwd ./apps/web -- run start
 
+            # Start HTTPS backend
+            pm2 start bun --name https-backend --cwd ./apps/http-backend -- run start
+
+            # Start WebSocket backend
+            pm2 start bun --name websocket-backend --cwd ./apps/web-socket-backend -- run start
+
+            # Save PM2 state
             pm2 save
           EOF
