@@ -31,22 +31,26 @@ jobs:
 
       - name: Sync files to droplet
         run: |
-          rsync -avz --delete --exclude='.git' ./ root@${{ secrets.DROPLET_IP }}:/root/your-app-directory
+          rsync -avz --delete --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" ./ root@${{ secrets.DROPLET_IP }}:/root/your-app-directory
 
       - name: Run on droplet
         run: |
-          ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << EOF
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << 'EOF'
             set -e
             cd /root/your-app-directory
 
+            # Export environment variables
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
             export JWT_SECRET="${{ secrets.JWT_SECRET }}"
 
+            # Install PM2 if missing
             if ! command -v pm2 &> /dev/null; then
               npm install -g pm2
             fi
 
-            export PATH="\$HOME/.bun/bin:\$PATH"
+            # Ensure bun is available
+            export PATH="$HOME/.bun/bin:$PATH"
 
+            # Start or restart your app
             pm2 restart your-app-name || pm2 start bun --name your-app-name -- run start
           EOF
