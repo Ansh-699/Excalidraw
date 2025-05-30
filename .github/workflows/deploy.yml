@@ -44,8 +44,8 @@ jobs:
 
             # Install Node.js and npm if missing
             if ! command -v npm &> /dev/null; then
-              apt update
-              apt install -y nodejs npm
+              apt-get update
+              apt-get install -y nodejs npm
             fi
 
             # Install pm2 if missing
@@ -56,5 +56,6 @@ jobs:
             # Ensure bun is available in PATH
             export PATH="$HOME/.bun/bin:$PATH"
 
-            pm2 restart your-app-name || pm2 start bun --name your-app-name -- run start
+            pm2 restart excalidraw || pm2 start bun --name excalidraw -- run start
+            pm2 save
           EOF
