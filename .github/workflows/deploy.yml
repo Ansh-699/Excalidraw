@@ -31,40 +31,47 @@ jobs:
 
       - name: Sync files to droplet
         run: |
-          rsync -avz --delete --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" ./ root@${{ secrets.DROPLET_IP }}:/root/your-app-directory
+          rsync -avz --delete --exclude='.git' --exclude='node_modules' --exclude='.env' \
+            -e "ssh -o StrictHostKeyChecking=no" ./ root@${{ secrets.DROPLET_IP }}:/root/your-app-directory
 
       - name: Run on droplet
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << EOF
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.DROPLET_IP }} << 'EOF'
             set -e
             cd /root/your-app-directory
 
-            # Install Node.js and npm if missing
-            if ! command -v npm &> /dev/null; then
-              apt-get update
-              apt-get install -y nodejs npm
+            # Ensure system dependencies
+            if ! command -v apt-get &> /dev/null; then
+              echo "apt-get not found. Are you on a minimal OS?"
+              exit 1
             fi
 
-            # Install pm2 if missing
+            if ! command -v npm &> /dev/null; then
+              apt-get update && apt-get install -y nodejs npm
+            fi
+
             if ! command -v pm2 &> /dev/null; then
               npm install -g pm2
             fi
 
-            # Install bun if missing
             if ! command -v bun &> /dev/null; then
               curl -fsSL https://bun.sh/install | bash
             fi
 
-            # Ensure bun is available in PATH
-            export PATH="\$HOME/.bun/bin:\$PATH"
+            export PATH="/root/.bun/bin:$PATH"
 
-            # Stop existing process if running
+            # Stop old process
             pm2 delete excalidraw || true
 
-            # Start the application with pm2 and environment variables
-            DATABASE_URL="${DATABASE_URL}" JWT_SECRET="${JWT_SECRET}" pm2 start "bun run start" --name excalidraw
+            # Start new process with working directory
+            DATABASE_URL="${DATABASE_URL}" \
+            JWT_SECRET="${JWT_SECRET}" \
+            pm2 start "/root/.bun/bin/bun run start" \
+              --name excalidraw \
+              --cwd /root/your-app-directory
+
             pm2 save
           EOF
