@@ -8,8 +8,13 @@ import { prisma } from "@repo/db/clients";
 import { SigninSchema } from "@repo/common/types";
 import { CreateRoomSchema } from "@repo/common/types";
 
+
+import cors from "cors";
+
 const app = express();
 app.use(express.json()); 
+app.use(cors());
+
 
 app.post("/signup", async (req: Request, res: Response): Promise<void> => {
   const data = CreateUserSchema.safeParse(req.body);
@@ -45,20 +50,29 @@ app.post("/signup", async (req: Request, res: Response): Promise<void> => {
 });
 
 app.post("/signin", async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    res.status(400).json({ error: "Missing email or password" });
-    return;
-  }
-  const data = SigninSchema.safeParse({ username: email, password });
-  if (!data.success) {
-    res.status(400).json({ error: "Invalid credentials" });
-    return;
-  }
   try {
+    const { email, password } = req.body;
+
+    if (typeof email !== "string" || typeof password !== "string") {
+      res.status(400).json({ error: "Email and password must be strings" });
+      return;
+    }
+    if (!email.trim() || !password.trim()) {
+      res.status(400).json({ error: "Missing email or password" });
+      return;
+    }
+
+    // Adjust your schema to expect email instead of username (or update accordingly)
+    const data = SigninSchema.safeParse({ username: email, password });
+    if (!data.success) {
+      res.status(400).json({ error: "Invalid credentials format" });
+      return;
+    }
+
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
+
+    if (!user || !user.password) {
+      // user or password field missing
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
@@ -69,36 +83,52 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (!config.jwtSecret) {
+      console.error("JWT secret is not set");
+      res.status(500).json({ error: "Internal server error" });
+      return;
+    }
+
     const token = jwt.sign({ userid: user.id }, config.jwtSecret, {
       expiresIn: "1h",
     });
+
     res.status(200).json({ message: "Sign in successful", token });
   } catch (err) {
     console.error("Signin error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+;
 
 app.post("/room-id", middleware, async (req: Request, res: Response): Promise<void> => {
-  if (!req.userid) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  const data = CreateRoomSchema.safeParse(req.body);
-  if (!data.success) {
-    res.status(400).json({ error: "Invalid room data" });
-    return;
-  }
-
-  const userid = req.userid;
-  const room = await prisma.room.create({
-    data: {
-      slug: data.data.name,
-      adminId: userid,
+  try {
+    if (!req.userid) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
     }
-  });
-  res.status(200).json({ roomId: room.id, userId: req.userid });
+
+    const data = CreateRoomSchema.safeParse(req.body);
+    if (!data.success) {
+      res.status(400).json({ error: "Invalid room data", details: data.error.errors });
+      return;
+    }
+
+    const userid = req.userid;
+    const room = await prisma.room.create({
+      data: {
+        slug: data.data.name,
+        adminId: userid,
+      },
+    });
+    res.status(200).json({ roomId: room.id, userId: req.userid });
+  } catch (err) {
+    console.error("Error creating room:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
+
+
 
 app.get("/chats/:roomId", async (req, res) => {
   try {

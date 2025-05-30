@@ -13,7 +13,7 @@
     "next-env.d.ts",
     "next.config.js",
     ".next/types/**/*.ts"
-  ],
+, "app/signin"  ],
   "exclude": [
     "node_modules"
   ]
