@@ -12,6 +12,35 @@ interface User {
   userId: string;
 }
 
+interface ParsedDataBase {
+  type: string;
+}
+
+interface JoinRoomData extends ParsedDataBase {
+  type: "join_room";
+  roomId: string;
+  slug?: string;
+}
+
+interface LeaveRoomData extends ParsedDataBase {
+  type: "leave_room";
+  roomId: string;
+}
+
+interface ChatData extends ParsedDataBase {
+  type: "chat";
+  roomId: string;
+  message: string;
+}
+
+interface DrawingData extends ParsedDataBase {
+  type: "drawing";
+  roomId: string;
+  shape: Record<string, any>; // Replace with specific shape type if available
+}
+
+type ParsedData = JoinRoomData | LeaveRoomData | ChatData | DrawingData;
+
 const users: User[] = [];
 
 function checkUser(token: string): string | null {
@@ -56,7 +85,7 @@ wss.on("connection", (ws, request) => {
   users.push(user);
 
   ws.on("message", async (data) => {
-    let parsedData: any;
+    let parsedData: ParsedData;
     try {
       const raw = typeof data === "string" ? data : data.toString();
       parsedData = JSON.parse(raw);
@@ -95,7 +124,7 @@ wss.on("connection", (ws, request) => {
           where: {
             roomId: room.id,
             shape: {
-              not: {  
+              not: {
                 equals: null,
               },
             },
@@ -103,12 +132,11 @@ wss.on("connection", (ws, request) => {
           orderBy: { createdAt: "asc" },
         });
 
-        // Send the existing shapes back to the client
         ws.send(
           JSON.stringify({
             type: "existing_shapes",
             roomId: room.id,
-            shapes: existingShapes.map((chat) => chat.shape),
+            shapes: existingShapes.map((chat: { shape: any }) => chat.shape),
           })
         );
 
@@ -175,17 +203,15 @@ wss.on("connection", (ws, request) => {
           });
         }
 
-        // Save drawing shape in DB before broadcasting
         await prisma.chat.create({
           data: {
             roomId: room.id,
             shape,
             userId: user.userId,
-            message: "", // no text message for drawings
+            message: "",
           },
         });
 
-        // Broadcast to all users in the room including sender
         users.forEach((u) => {
           if (u.rooms.includes(room.id)) {
             u.ws.send(
