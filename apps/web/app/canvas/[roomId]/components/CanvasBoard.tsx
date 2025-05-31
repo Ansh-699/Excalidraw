@@ -31,8 +31,8 @@ function isPointInShape(x: number, y: number, shape: DrawingShape): boolean {
   } else {
     const x1 = shape.x ?? 0;
     const y1 = shape.y ?? 0;
-    const x2 = (shape.x ?? 0) + (shape.width ?? 0);
-    const y2 = (shape.y ?? 0) + (shape.height ?? 0);
+    const x2 = x1 + (shape.width ?? 0);
+    const y2 = y1 + (shape.height ?? 0);
     return (
       x >= Math.min(x1, x2) &&
       x <= Math.max(x1, x2) &&
@@ -108,17 +108,12 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
         if (erasedShapes.length === 0) return;
 
         const erasedShapeIds = erasedShapes.map((shape) => shape.id);
-
-        // Remove all erased shapes at once
         shapesRef.current = shapesRef.current.filter(
           (shape) => !erasedShapeIds.includes(shape.id)
         );
-
-        // Broadcast erase message for each erased shape
         erasedShapeIds.forEach((shapeId) => {
           sendMessage({ type: "erase_shape", roomId, shapeId });
         });
-
         redrawAll();
         return;
       }
@@ -138,7 +133,9 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      redrawAll();
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawAllShapes(ctx, shapesRef.current);
 
       if (currentTool === "pencil") {
         const last = shapesRef.current.at(-1);
@@ -146,16 +143,16 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
           last.points.push({ x, y });
           drawAllShapes(ctx, [last]);
         }
-      } else {
-        const tempShape = {
+      } else if (currentTool !== "eraser") {
+        const tempShape: DrawingShape = {
           id: createShapeId(),
-          type: currentTool as Exclude<ShapeType | "eraser", "eraser">,
+          type: currentTool,
           x: startX,
           y: startY,
           width: x - startX,
           height: y - startY,
         };
-        drawAllShapes(ctx, [tempShape as DrawingShape]);
+        drawAllShapes(ctx, [tempShape]);
       }
     };
 
@@ -191,7 +188,6 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
     canvas.addEventListener("mousedown", handleMouseDown);
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("mouseup", handleMouseUp);
-    redrawAll();
 
     return () => {
       canvas.removeEventListener("mousedown", handleMouseDown);
