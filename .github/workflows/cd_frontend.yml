@@ -36,7 +36,6 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
           chmod 600 ~/ssh_key
           ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
-            docker stop excalidraw-frontend || true
-            docker rm excalidraw-frontend || true
+            docker rm -f excalidraw-frontend || true
             docker run --name excalidraw-frontend -d -p 3000:3000 ${{ env.IMAGE_NAME }}:${{ github.sha }}
           "
