@@ -1,11 +1,16 @@
 name: Deploy the backend
+
 on:
   push:
     branches: [ main ]
 
-jobs: 
+env:
+  IMAGE_NAME: ansh7845/excalidraw-backend
+
+jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout the code
         uses: actions/checkout@v2
@@ -22,13 +27,14 @@ jobs:
           context: .
           file: ./docker/docker.backend
           push: true
-          tags: 100xdevs/todo-app-backend:${{ github.sha }}
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Deploy to the VM
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
           chmod 600 ~/ssh_key
           ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
-            docker stop todo_app_backend || true
-            docker rm todo_app_backend || true
-            docker run --name todo_app_backend -d -p 3001:3001 ansh7845/excalidraw-backend:${{ github.sha }}"
+            docker stop excalidraw-backend || true
+            docker rm excalidraw-backend || true
+            docker run --name excalidraw-backend -d -p 3001:3001 ansh7845/excalidraw-backend:${{ github.sha }}
+            "

@@ -1,11 +1,16 @@
 name: Deploy the frontend
+
 on:
   push:
     branches: [ main ]
 
+env:
+  IMAGE_NAME: ansh7845/excalidraw-frontend
+
 jobs: 
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout the code
         uses: actions/checkout@v2
@@ -24,13 +29,14 @@ jobs:
           build-args: |
             DATABASE_URL=${{ secrets.DATABASE_URL }}
           push: true
-          tags: 100xdevs/todo-app-frontend:${{ github.sha }}
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Deploy to the VM
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
           chmod 600 ~/ssh_key
           ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
-            docker stop todo_app_frontend || true
-            docker rm todo_app_frontend || true
-            docker run --name todo_app_frontend -d -p 3000:3000 ansh7845/excalidraw-frontend:${{ github.sha }}"
+            docker stop excalidraw-frontend || true
+            docker rm excalidraw-frontend || true
+            docker run --name excalidraw-frontend -d -p 3000:3000 ansh7845/excalidraw-frontend:${{ github.sha }}
+            "

@@ -1,9 +1,13 @@
 name: Deploy the websocket server
+
 on:
   push:
     branches: [ main ]
 
-jobs: 
+env:
+  IMAGE_NAME: ansh7845/excalidraw-websocket
+
+jobs:
   build:
     runs-on: ubuntu-latest
     steps:
@@ -22,13 +26,14 @@ jobs:
           context: .
           file: ./docker/docker.websocket
           push: true
-          tags: 100xdevs/todo-app-websocket:${{ github.sha }}
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Deploy to the VM
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
           chmod 600 ~/ssh_key
           ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
-            docker stop todo_app_websocket || true
-            docker rm todo_app_websocket || true
-            docker run --name todo_app_websocket -d -p 8081:8081 ansh7845/excalidraw-websocket:${{ github.sha }}"
+            docker stop excalidraw-websocket || true
+            docker rm excalidraw-websocket || true
+            docker run --name excalidraw-websocket -d -p 8081:8081 ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            "
