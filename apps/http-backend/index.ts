@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { config } from "@repo/backend-common/secret";
+// import { config } from "@repo/backend-common/secret";
 import { middleware } from "./middleware.js";
 import { CreateUserSchema } from "@repo/common/types";
 import { prisma } from "@repo/db/clients";
@@ -17,7 +17,6 @@ app.use(cors());
 
 
 app.post("/signup", async (req: Request, res: Response): Promise<void> => {
-console.log("JWT Secret:", config.jwtSecret ? "Set" : "NOT SET");
 
   const data = CreateUserSchema.safeParse(req.body);
 
