@@ -31,8 +31,8 @@ function isPointInShape(x: number, y: number, shape: DrawingShape): boolean {
   } else {
     const x1 = shape.x ?? 0;
     const y1 = shape.y ?? 0;
-    const x2 = (shape.x ?? 0) + (shape.width ?? 0);
-    const y2 = (shape.y ?? 0) + (shape.height ?? 0);
+    const x2 = x1 + (shape.width ?? 0);
+    const y2 = y1 + (shape.height ?? 0);
     return (
       x >= Math.min(x1, x2) &&
       x <= Math.max(x1, x2) &&
@@ -46,6 +46,7 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const shapesRef = useRef<DrawingShape[]>([]);
 
+  // Effect: Canvas & WebSocket setup runs ONLY on roomId change
   useEffect(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
@@ -108,17 +109,12 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
         if (erasedShapes.length === 0) return;
 
         const erasedShapeIds = erasedShapes.map((shape) => shape.id);
-
-        // Remove all erased shapes at once
         shapesRef.current = shapesRef.current.filter(
           (shape) => !erasedShapeIds.includes(shape.id)
         );
-
-        // Broadcast erase message for each erased shape
         erasedShapeIds.forEach((shapeId) => {
           sendMessage({ type: "erase_shape", roomId, shapeId });
         });
-
         redrawAll();
         return;
       }
@@ -132,61 +128,145 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
         });
       }
     };
+const handleMouseMove = (e: MouseEvent) => {
+  if (!drawing) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!drawing) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      redrawAll();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawAllShapes(ctx, shapesRef.current);
 
-      if (currentTool === "pencil") {
-        const last = shapesRef.current.at(-1);
-        if (last && last.type === "pencil" && last.points) {
-          last.points.push({ x, y });
-          drawAllShapes(ctx, [last]);
-        }
-      } else {
-        const tempShape = {
+  if (currentTool === "pencil") {
+    const last = shapesRef.current.at(-1);
+    if (last && last.type === "pencil" && last.points) {
+      last.points.push({ x, y });
+      drawAllShapes(ctx, [last]);
+    }
+  } else if (currentTool !== "eraser") {
+    let tempShape: DrawingShape;
+
+    switch (currentTool) {
+      case "rectangle":
+        tempShape = {
           id: createShapeId(),
-          type: currentTool as Exclude<ShapeType | "eraser", "eraser">,
+          type: "rectangle",
           x: startX,
           y: startY,
           width: x - startX,
           height: y - startY,
         };
-        drawAllShapes(ctx, [tempShape as DrawingShape]);
+        break;
+
+      case "circle": {
+        const radius = Math.sqrt((x - startX) ** 2 + (y - startY) ** 2);
+        tempShape = {
+          id: createShapeId(),
+          type: "circle",
+          x: startX - radius,
+          y: startY - radius,
+          width: radius * 2,
+          height: radius * 2,
+        };
+        break;
       }
-    };
 
-    const handleMouseUp = (e: MouseEvent) => {
-      if (!drawing) return;
-      drawing = false;
-      if (currentTool === "eraser") return;
+      case "triangle":
+        tempShape = {
+          id: createShapeId(),
+          type: "triangle",
+          x: startX,
+          y: startY,
+          width: x - startX,
+          height: y - startY,
+        };
+        break;
 
-      const rect = canvas.getBoundingClientRect();
-      const endX = e.clientX - rect.left;
-      const endY = e.clientY - rect.top;
+      default:
+        // fallback: just rectangle
+        tempShape = {
+          id: createShapeId(),
+          type: "rectangle",
+          x: startX,
+          y: startY,
+          width: x - startX,
+          height: y - startY,
+        };
+    }
+    drawAllShapes(ctx, [tempShape]);
+  }
+};
 
-      let newShape: DrawingShape;
-      if (currentTool === "pencil") {
-        newShape = shapesRef.current.at(-1)!;
-      } else {
+const handleMouseUp = (e: MouseEvent) => {
+  if (!drawing) return;
+  drawing = false;
+  if (currentTool === "eraser") return;
+
+  const rect = canvas.getBoundingClientRect();
+  const endX = e.clientX - rect.left;
+  const endY = e.clientY - rect.top;
+
+  let newShape: DrawingShape;
+
+  if (currentTool === "pencil") {
+    newShape = shapesRef.current.at(-1)!;
+  } else {
+    switch (currentTool) {
+      case "rectangle":
         newShape = {
           id: createShapeId(),
-          type: currentTool,
+          type: "rectangle",
           x: startX,
           y: startY,
           width: endX - startX,
           height: endY - startY,
         };
-        shapesRef.current.push(newShape);
+        break;
+
+      case "circle": {
+        const radius = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+        newShape = {
+          id: createShapeId(),
+          type: "circle",
+          x: startX - radius,
+          y: startY - radius,
+          width: radius * 2,
+          height: radius * 2,
+        };
+        break;
       }
 
-      sendMessage({ type: "drawing", roomId, shape: newShape });
-      postShape(roomId, newShape).catch(console.error);
-      redrawAll();
-    };
+      case "triangle":
+        newShape = {
+          id: createShapeId(),
+          type: "triangle",
+          x: startX,
+          y: startY,
+          width: endX - startX,
+          height: endY - startY,
+        };
+        break;
+
+      default:
+        newShape = {
+          id: createShapeId(),
+          type: "rectangle",
+          x: startX,
+          y: startY,
+          width: endX - startX,
+          height: endY - startY,
+        };
+    }
+    shapesRef.current.push(newShape);
+  }
+
+  sendMessage({ type: "drawing", roomId, shape: newShape });
+  postShape(roomId, newShape).catch(console.error);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawAllShapes(ctx, shapesRef.current);
+};
+
 
     canvas.addEventListener("mousedown", handleMouseDown);
     canvas.addEventListener("mousemove", handleMouseMove);
@@ -201,7 +281,22 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       offMessageType("existing_shapes", handleIncoming);
       offMessageType("erase_shape", handleIncoming);
     };
-  }, [roomId, currentTool]);
+  }, [roomId]); // <-- Only roomId here
 
-  return <canvas ref={canvasRef} style={{ display: "block", cursor: "crosshair" }} />;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (currentTool === "eraser") {
+      canvas.style.cursor = "crosshair"; // Change if you want a specific eraser cursor
+    } else {
+      canvas.style.cursor = "crosshair"; // or 'default', or custom cursor per tool
+    }
+  }, [currentTool]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ display: "block", cursor: "crosshair" }}
+    />
+  );
 }
