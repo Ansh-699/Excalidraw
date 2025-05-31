@@ -128,73 +128,72 @@ app.post("/room-id", middleware, async (req: Request, res: Response): Promise<vo
   }
 });
 
-// app.get("/chats/:roomId", async (req, res) => {
-//   try {
-//     const roomId = req.params.roomId;
-//     const messages = await prisma.chat.findMany({
-//       where: {
-//         roomId,
-//       },
-//       orderBy: {
-//         id: "desc",
-//       },
-//       take: 1000,
-//     });
+app.get("/chats/:roomId", async (req, res) => {
+  try {
+    const roomId = req.params.roomId;
+    const messages = await prisma.chat.findMany({
+      where: {
+        roomId,
+      },
+      orderBy: {
+        id: "desc",
+      },
+      take: 1000,
+    });
 
-//     res.json({ messages });
-//   } catch (e) {
-//     console.error(e);
-//     res.json({ messages: [] });
-//   }
-// });
+    res.json({ messages });
+  } catch (e) {
+    console.error(e);
+    res.json({ messages: [] });
+  }
+});
 
-// app.get("/room/:slug", async (req, res) => {
-//   try {
-//     const slug = req.params.slug;
-//     const room = await prisma.room.findFirst({
-//       where: {
-//         slug,
-//       },
-//     });
+app.get("/room/:slug", async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    const room = await prisma.room.findFirst({
+      where: {
+        slug,
+      },
+    });
 
-//     res.json({ room });
-//   } catch (e) {
-//     console.error(e);
-//     res.status(500).json({ error: "Internal server error" });
-//   }
-// });
+    res.json({ room });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
-// NEW endpoint to fetch all shapes for a room, ordered oldest to newest
-// app.get("/shapes/:roomId", async (req, res) => {
-//   try {
-//     const roomId = req.params.roomId;
+app.get("/shapes/:roomId", async (req, res) => {
+  try {
+    const roomId = req.params.roomId;
 
-//     const shapes = await prisma.chat.findMany({
-//       where: {
-//         roomId,
-//         shape: {
-//           not: {
-//             equals: null,
-//           },
-//         },
-//       },
-//       select: {
-//         id: true,
-//         shape: true,
-//         createdAt: true,
-//         userId: true,
-//       },
-//       orderBy: {
-//         createdAt: "asc",
-//       },
-//     });
+    const shapes = await prisma.chat.findMany({
+      where: {
+        roomId,
+        shape: {
+          not: {
+            equals: null,
+          },
+        },
+      },
+      select: {
+        id: true,
+        shape: true,
+        createdAt: true,
+        userId: true,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
 
-//     res.status(200).json(shapes);
-//   } catch (e) {
-//     console.error(e);
-//     res.status(500).json({ error: "Failed to fetch shapes" });
-//   }
-// });
+    res.status(200).json(shapes);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch shapes" });
+  }
+});
 
 app.listen(3001, "0.0.0.0", () => {
   console.log("Backend listening on port 3001");
