@@ -31,4 +31,4 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
             docker stop todo_app_backend || true
             docker rm todo_app_backend || true
-            docker run --name todo_app_backend -d -p 3001:3001 100xdevs/todo-app-backend:${{ github.sha }}"
+            docker run --name todo_app_backend -d -p 3001:3001 ansh7845/excalidraw-backend:${{ github.sha }}"
