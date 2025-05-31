@@ -20,7 +20,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./docker/dockerfile.frontend
+          file: ./docker/docker.frontend
           build-args: |
             DATABASE_URL=${{ secrets.DATABASE_URL }}
           push: true

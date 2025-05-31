@@ -20,7 +20,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./docker/dockerfile.backend
+          file: ./docker/docker.backend
           push: true
           tags: 100xdevs/todo-app-backend:${{ github.sha }}
 
