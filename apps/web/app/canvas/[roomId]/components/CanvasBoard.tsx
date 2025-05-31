@@ -45,26 +45,34 @@ function isPointInShape(x: number, y: number, shape: DrawingShape): boolean {
 export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const shapesRef = useRef<DrawingShape[]>([]);
+  const currentToolRef = useRef<ShapeType | "eraser">(currentTool);
 
-  // Effect: Canvas & WebSocket setup runs ONLY on roomId change
+  // Keep the ref updated whenever currentTool changes
+  useEffect(() => {
+    currentToolRef.current = currentTool;
+  }, [currentTool]);
+
+  // Initialize canvas, WebSocket, and mouse handlers when roomId changes
   useEffect(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
+    // 1) Connect WebSocket and join room
     const token = localStorage.getItem("token") || "";
-
     connectWebSocket(token, () => {
       sendMessage({ type: "join_room", roomId });
     });
 
+    // 2) Fetch existing shapes once, then draw them
     getExistingShapes(roomId).then((existing) => {
       shapesRef.current = existing;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawAllShapes(ctx, shapesRef.current);
     });
 
+    // 3) When a message arrives over WS, update shapesRef and redraw
     const handleIncoming = (data: any) => {
       if (data.roomId !== roomId) return;
 
@@ -95,6 +103,7 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       drawAllShapes(ctx, shapesRef.current);
     };
 
+    // 4) MOUSE DOWN: start drawing or erase
     const handleMouseDown = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -102,17 +111,19 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       startX = x;
       startY = y;
 
-      if (currentTool === "eraser") {
-        const erasedShapes = shapesRef.current.filter((shape) =>
+      const tool = currentToolRef.current;
+      if (tool === "eraser") {
+        // Erase any shape under the cursor
+        const erased = shapesRef.current.filter((shape) =>
           isPointInShape(x, y, shape)
         );
-        if (erasedShapes.length === 0) return;
+        if (!erased.length) return;
 
-        const erasedShapeIds = erasedShapes.map((shape) => shape.id);
+        const erasedIds = erased.map((s) => s.id);
         shapesRef.current = shapesRef.current.filter(
-          (shape) => !erasedShapeIds.includes(shape.id)
+          (s) => !erasedIds.includes(s.id)
         );
-        erasedShapeIds.forEach((shapeId) => {
+        erasedIds.forEach((shapeId) => {
           sendMessage({ type: "erase_shape", roomId, shapeId });
         });
         redrawAll();
@@ -120,7 +131,8 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       }
 
       drawing = true;
-      if (currentTool === "pencil") {
+      if (tool === "pencil") {
+        // Start a new pencil stroke
         shapesRef.current.push({
           id: createShapeId(),
           type: "pencil",
@@ -128,152 +140,162 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
         });
       }
     };
-const handleMouseMove = (e: MouseEvent) => {
-  if (!drawing) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawAllShapes(ctx, shapesRef.current);
+    // 5) MOUSE MOVE: draw preview shape or extend pencil
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!drawing) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const tool = currentToolRef.current;
 
-  if (currentTool === "pencil") {
-    const last = shapesRef.current.at(-1);
-    if (last && last.type === "pencil" && last.points) {
-      last.points.push({ x, y });
-      drawAllShapes(ctx, [last]);
-    }
-  } else if (currentTool !== "eraser") {
-    let tempShape: DrawingShape;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawAllShapes(ctx, shapesRef.current);
 
-    switch (currentTool) {
-      case "rectangle":
-        tempShape = {
-          id: createShapeId(),
-          type: "rectangle",
-          x: startX,
-          y: startY,
-          width: x - startX,
-          height: y - startY,
-        };
-        break;
+      if (tool === "pencil") {
+        const last = shapesRef.current.at(-1);
+        if (last && last.type === "pencil" && last.points) {
+          last.points.push({ x, y });
+          drawAllShapes(ctx, [last]);
+        }
+      } else if (tool !== "eraser") {
+        let tempShape: DrawingShape;
 
-      case "circle": {
-        const radius = Math.sqrt((x - startX) ** 2 + (y - startY) ** 2);
-        tempShape = {
-          id: createShapeId(),
-          type: "circle",
-          x: startX - radius,
-          y: startY - radius,
-          width: radius * 2,
-          height: radius * 2,
-        };
-        break;
+        switch (tool) {
+          case "rectangle":
+            tempShape = {
+              id: createShapeId(),
+              type: "rectangle",
+              x: startX,
+              y: startY,
+              width: x - startX,
+              height: y - startY,
+            };
+            break;
+
+          case "circle": {
+            const radius = Math.sqrt((x - startX) ** 2 + (y - startY) ** 2);
+            tempShape = {
+              id: createShapeId(),
+              type: "circle",
+              x: startX - radius,
+              y: startY - radius,
+              width: radius * 2,
+              height: radius * 2,
+            };
+            break;
+          }
+
+          case "triangle":
+            tempShape = {
+              id: createShapeId(),
+              type: "triangle",
+              x: startX,
+              y: startY,
+              width: x - startX,
+              height: y - startY,
+            };
+            break;
+
+          default:
+            // Should never happen if your tool is one of the four
+            tempShape = {
+              id: createShapeId(),
+              type: "rectangle",
+              x: startX,
+              y: startY,
+              width: x - startX,
+              height: y - startY,
+            };
+        }
+
+        drawAllShapes(ctx, [tempShape]);
+      }
+    };
+
+    // 6) MOUSE UP: commit the final shape
+    const handleMouseUp = (e: MouseEvent) => {
+      if (!drawing) return;
+      drawing = false;
+      const tool = currentToolRef.current;
+      if (tool === "eraser") return;
+
+      const rect = canvas.getBoundingClientRect();
+      const endX = e.clientX - rect.left;
+      const endY = e.clientY - rect.top;
+
+      let newShape: DrawingShape;
+      if (tool === "pencil") {
+        // Last pencil stroke is already in shapesRef
+        newShape = shapesRef.current.at(-1)!;
+      } else {
+        switch (tool) {
+          case "rectangle":
+            newShape = {
+              id: createShapeId(),
+              type: "rectangle",
+              x: startX,
+              y: startY,
+              width: endX - startX,
+              height: endY - startY,
+            };
+            break;
+
+          case "circle": {
+            const radius = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+            newShape = {
+              id: createShapeId(),
+              type: "circle",
+              x: startX - radius,
+              y: startY - radius,
+              width: radius * 2,
+              height: radius * 2,
+            };
+            break;
+          }
+
+          case "triangle":
+            newShape = {
+              id: createShapeId(),
+              type: "triangle",
+              x: startX,
+              y: startY,
+              width: endX - startX,
+              height: endY - startY,
+            };
+            break;
+
+          default:
+            // Fallback to rectangle if somehow tool is invalid
+            newShape = {
+              id: createShapeId(),
+              type: "rectangle",
+              x: startX,
+              y: startY,
+              width: endX - startX,
+              height: endY - startY,
+            };
+        }
+        shapesRef.current.push(newShape);
       }
 
-      case "triangle":
-        tempShape = {
-          id: createShapeId(),
-          type: "triangle",
-          x: startX,
-          y: startY,
-          width: x - startX,
-          height: y - startY,
-        };
-        break;
+      sendMessage({ type: "drawing", roomId, shape: newShape });
+      postShape(roomId, newShape).catch(console.error);
 
-      default:
-        // fallback: just rectangle
-        tempShape = {
-          id: createShapeId(),
-          type: "rectangle",
-          x: startX,
-          y: startY,
-          width: x - startX,
-          height: y - startY,
-        };
-    }
-    drawAllShapes(ctx, [tempShape]);
-  }
-};
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawAllShapes(ctx, shapesRef.current);
+    };
 
-const handleMouseUp = (e: MouseEvent) => {
-  if (!drawing) return;
-  drawing = false;
-  if (currentTool === "eraser") return;
-
-  const rect = canvas.getBoundingClientRect();
-  const endX = e.clientX - rect.left;
-  const endY = e.clientY - rect.top;
-
-  let newShape: DrawingShape;
-
-  if (currentTool === "pencil") {
-    newShape = shapesRef.current.at(-1)!;
-  } else {
-    switch (currentTool) {
-      case "rectangle":
-        newShape = {
-          id: createShapeId(),
-          type: "rectangle",
-          x: startX,
-          y: startY,
-          width: endX - startX,
-          height: endY - startY,
-        };
-        break;
-
-      case "circle": {
-        const radius = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
-        newShape = {
-          id: createShapeId(),
-          type: "circle",
-          x: startX - radius,
-          y: startY - radius,
-          width: radius * 2,
-          height: radius * 2,
-        };
-        break;
-      }
-
-      case "triangle":
-        newShape = {
-          id: createShapeId(),
-          type: "triangle",
-          x: startX,
-          y: startY,
-          width: endX - startX,
-          height: endY - startY,
-        };
-        break;
-
-      default:
-        newShape = {
-          id: createShapeId(),
-          type: "rectangle",
-          x: startX,
-          y: startY,
-          width: endX - startX,
-          height: endY - startY,
-        };
-    }
-    shapesRef.current.push(newShape);
-  }
-
-  sendMessage({ type: "drawing", roomId, shape: newShape });
-  postShape(roomId, newShape).catch(console.error);
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawAllShapes(ctx, shapesRef.current);
-};
-
-
+    // Attach listeners
     canvas.addEventListener("mousedown", handleMouseDown);
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("mouseup", handleMouseUp);
+
+    // Initial draw
     redrawAll();
 
     return () => {
+      // Cleanup
       canvas.removeEventListener("mousedown", handleMouseDown);
       canvas.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseup", handleMouseUp);
@@ -281,15 +303,16 @@ const handleMouseUp = (e: MouseEvent) => {
       offMessageType("existing_shapes", handleIncoming);
       offMessageType("erase_shape", handleIncoming);
     };
-  }, [roomId]); // <-- Only roomId here
+  }, [roomId]); // No currentTool here—handlers read from currentToolRef
 
+  // Separate effect: just update cursor when currentTool changes
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     if (currentTool === "eraser") {
-      canvas.style.cursor = "crosshair"; // Change if you want a specific eraser cursor
+      canvas.style.cursor = "crosshair"; // change to an eraser-style cursor if you like
     } else {
-      canvas.style.cursor = "crosshair"; // or 'default', or custom cursor per tool
+      canvas.style.cursor = "crosshair"; // default for drawing
     }
   }, [currentTool]);
 
