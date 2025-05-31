@@ -33,6 +33,7 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
           chmod 600 ~/ssh_key
           ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
-            docker rm -f excalidraw-websocket || true
+            docker stop excalidraw-websocket || true
+            docker rm excalidraw-websocket || true
             docker run --name excalidraw-websocket -d -p 8081:8081 ${{ env.IMAGE_NAME }}:${{ github.sha }}
             "
