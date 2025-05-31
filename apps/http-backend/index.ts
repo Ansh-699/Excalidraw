@@ -164,39 +164,6 @@ app.get("/room/:slug", async (req, res) => {
   }
 });
 
-// Add this to your backend
-app.post("/shapes/:roomId", middleware, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const roomId = req.params.roomId;
-    const { shape } = req.body;
-
-    if (!shape) {
-      res.status(400).json({ error: "Missing shape data" });
-      return;
-    }
-
-    if (!req.userid) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-
-    await prisma.chat.create({
-      data: {
-        roomId: roomId as string,
-        userId: req.userid, // from middleware
-        shape,
-        message: "", // Provide a default or empty message
-      },
-    });
-
-    res.status(200).json({ message: "Shape saved successfully" });
-  } catch (error) {
-    console.error("Error saving shape:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-
 app.get("/shapes/:roomId", async (req, res) => {
   try {
     const roomId = req.params.roomId;
