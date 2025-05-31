@@ -27,7 +27,7 @@ jobs:
           context: .
           file: ./docker/docker.frontend
           build-args: |
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            DB_URL=${{ secrets.DATABASE_URL }}
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
@@ -38,5 +38,5 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
             docker stop excalidraw-frontend || true
             docker rm excalidraw-frontend || true
-            docker run --name excalidraw-frontend -d -p 3000:3000 ansh7845/excalidraw-frontend:${{ github.sha }}
-            "
+            docker run --name excalidraw-frontend -d -p 3000:3000 ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          "

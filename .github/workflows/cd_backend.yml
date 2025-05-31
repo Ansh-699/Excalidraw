@@ -36,5 +36,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
             docker stop excalidraw-backend || true
             docker rm excalidraw-backend || true
-            docker run --name excalidraw-backend -d -p 3001:3001 ansh7845/excalidraw-backend:${{ github.sha }}
-            "
+            docker run --name excalidraw-backend -d -p 3001:3001 \
+              -e DATABASE_URL='${{ secrets.DATABASE_URL }}' \
+              ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          "
