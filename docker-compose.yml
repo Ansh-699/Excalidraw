@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/docker.frontend
+      args:
+        DB_URL: ${DB_URL}
+    environment:
+      - DB_URL=${DB_URL}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+      - websocket
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/docker.backend
+      args:
+        DB_URL: ${DB_URL}
+    environment:
+      - DB_URL=${DB_URL}
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  websocket:
+    build:
+      context: .
+      dockerfile: docker/docker.websocket
+      args:
+        DB_URL: ${DB_URL}
+    environment:
+      - DB_URL=${DB_URL}
+    ports:
+      - "8081:8081"
+    restart: unless-stopped

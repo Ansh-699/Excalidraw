@@ -1,11 +1,15 @@
 FROM oven/bun:1
 
+# Install OpenSSL dependencies needed by Prisma
+RUN apt-get update && apt-get install -y openssl libssl-dev
+
 WORKDIR /usr/src/app
 
-## Can you optimise this?
-COPY . .
+COPY package.json ./
 
 RUN bun install
+
+COPY . .
 
 RUN bun run generate:db
 

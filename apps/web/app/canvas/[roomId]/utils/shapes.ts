@@ -1,6 +1,5 @@
 // utils/shapes.ts
 import axios from "axios";
-
 import { v4 as uuidv4 } from "uuid";
 
 export type ShapeType =
@@ -15,9 +14,7 @@ export interface BaseShape {
   type: ShapeType;
 }
 
-
-    const BACKEND_URL = "http://142.93.223.72:3001";
-
+const BACKEND_URL = "http://localhost:3001";
 
 export interface RectShape extends BaseShape {
   type: "rectangle";
@@ -97,14 +94,32 @@ export function drawAllShapes(ctx: CanvasRenderingContext2D, shapes: DrawingShap
 }
 
 export async function getExistingShapes(roomId: string): Promise<DrawingShape[]> {
+  const token = localStorage.getItem("token"); // get token from localStorage
+
   const res = await axios.get<{ messages: Array<{ shape?: DrawingShape }> }>(
-    `${BACKEND_URL}/chats/${roomId}`
+    `${BACKEND_URL}/chats/${roomId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
   );
+
   return res.data.messages
     .map((msg) => msg.shape)
     .filter((s): s is DrawingShape => !!s);
 }
 
 export async function postShape(roomId: string, shape: DrawingShape) {
-  await axios.post(`${BACKEND_URL}/chats/${roomId}`, { shape });
+  const token = localStorage.getItem("token"); // get token from localStorage
+
+  await axios.post(
+    `${BACKEND_URL}/chats/${roomId}`,
+    { shape },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 }

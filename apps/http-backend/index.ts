@@ -1,32 +1,30 @@
+// src/server.ts (or index.ts)
+
 import express, { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-// import { config } from "@repo/backend-common/secret";
-import { middleware } from "./middleware.js";
-import { CreateUserSchema } from "@repo/common/types";
-import { prisma } from "@repo/db/clients";
-import { SigninSchema } from "@repo/common/types";
-import { CreateRoomSchema } from "@repo/common/types";
-
 import cors from "cors";
+
+import { middleware } from "./middleware.js";
+import { CreateUserSchema, SigninSchema, CreateRoomSchema } from "@repo/common/types";
+import { prisma } from "@repo/db/clients";
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-
-
+/**
+ * POST /signup
+ * Creates a new user (username, email, password hashed via bcrypt).
+ */
 app.post("/signup", async (req: Request, res: Response): Promise<void> => {
-
   const data = CreateUserSchema.safeParse(req.body);
-
   if (!data.success) {
     res.status(400).json({ error: "Invalid user data" });
     return;
   }
 
   const { username, email, password } = data.data;
-
   try {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -50,11 +48,13 @@ app.post("/signup", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+/**
+ * POST /signin
+ * Validates email/password, returns a JWT on success.
+ */
 app.post("/signin", async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
-
-    console.log("Signin attempt:", { email, passwordExists: !!password });
     if (typeof email !== "string" || typeof password !== "string") {
       res.status(400).json({ error: "Email and password must be strings" });
       return;
@@ -64,7 +64,7 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-const data = SigninSchema.safeParse({ email, password });
+    const data = SigninSchema.safeParse({ email, password });
     if (!data.success) {
       console.error("SigninSchema error:", data.error);
       res.status(400).json({ error: "Invalid credentials format" });
@@ -72,26 +72,19 @@ const data = SigninSchema.safeParse({ email, password });
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
-    console.log("User found:", user ? user.email : "No user");
-
     if (!user || !user.password) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log("Password match:", isMatch);
-
     if (!isMatch) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
-    // Hardcoded JWT secret
-    const token = jwt.sign({ userid: user.id }, "anshtyagi", {
-      expiresIn: "1h",
-    });
-
+    // Hardcoded JWT secret; consider moving to env var
+    const token = jwt.sign({ userid: user.id }, "anshtyagi", { expiresIn: "1h" });
     res.status(200).json({ message: "Sign in successful", token });
   } catch (err) {
     console.error("Signin error:", err);
@@ -99,8 +92,10 @@ const data = SigninSchema.safeParse({ email, password });
   }
 });
 
-
-
+/**
+ * POST /room-id
+ * Creates a new room. Requires valid JWT (middleware should populate req.userid).
+ */
 app.post("/room-id", middleware, async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.userid) {
@@ -128,19 +123,18 @@ app.post("/room-id", middleware, async (req: Request, res: Response): Promise<vo
   }
 });
 
-app.get("/chats/:roomId", async (req, res) => {
+/**
+ * GET /chats/:roomId
+ * Fetches the last 1000 chat entries (including shape objects) for a room, ordered descending by id.
+ */
+app.get("/chats/:roomId", async (req: Request, res: Response): Promise<void> => {
   try {
     const roomId = req.params.roomId;
     const messages = await prisma.chat.findMany({
-      where: {
-        roomId,
-      },
-      orderBy: {
-        id: "desc",
-      },
+      where: { roomId },
+      orderBy: { id: "desc" },
       take: 1000,
     });
-
     res.json({ messages });
   } catch (e) {
     console.error(e);
@@ -148,15 +142,66 @@ app.get("/chats/:roomId", async (req, res) => {
   }
 });
 
-app.get("/room/:slug", async (req, res) => {
+/**
+ * POST /chats/:roomId
+ * Saves a new drawing (shape) into the chat table. Requires valid JWT (middleware).
+ */
+app.post(
+  "/chats/:roomId",
+  middleware,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!req.userid) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const roomId = req.params.roomId;
+      const { shape } = req.body as { shape: unknown };
+      if (!shape) {
+        res.status(400).json({ error: "Shape payload missing" });
+        return;
+      }
+
+      // Ensure room exists (or create if missing)
+      let room = await prisma.room.findUnique({ where: { id: roomId } });
+      if (!room) {
+        room = await prisma.room.create({
+          data: {
+            id: roomId,
+            slug: roomId || `room-${Date.now()}`,
+            adminId: req.userid,
+          },
+        });
+      }
+
+      // Save the shape in chat table
+      const chatEntry = await prisma.chat.create({
+        data: {
+          roomId: room.id,
+          shape,
+          userId: req.userid,
+          message: "", // No text message here
+        },
+      });
+
+      // Respond with the newly created entry
+      res.status(201).json({ id: chatEntry.id, shape: chatEntry.shape });
+    } catch (e) {
+      console.error("Error saving shape to chat:", e);
+      res.status(500).json({ error: "Failed to save shape" });
+    }
+  }
+);
+
+/**
+ * GET /room/:slug
+ * Retrieves room info by slug.
+ */
+app.get("/room/:slug", async (req: Request, res: Response): Promise<void> => {
   try {
     const slug = req.params.slug;
-    const room = await prisma.room.findFirst({
-      where: {
-        slug,
-      },
-    });
-
+    const room = await prisma.room.findFirst({ where: { slug } });
     res.json({ room });
   } catch (e) {
     console.error(e);
@@ -164,18 +209,17 @@ app.get("/room/:slug", async (req, res) => {
   }
 });
 
-app.get("/shapes/:roomId", async (req, res) => {
+/**
+ * GET /shapes/:roomId
+ * Retrieves all saved shapes for a room (filtering out chat entries without a shape).
+ */
+app.get("/shapes/:roomId", async (req: Request, res: Response): Promise<void> => {
   try {
     const roomId = req.params.roomId;
-
     const shapes = await prisma.chat.findMany({
       where: {
         roomId,
-        shape: {
-          not: {
-            equals: null,
-          },
-        },
+        shape: { not: { equals: null } },
       },
       select: {
         id: true,
@@ -183,9 +227,7 @@ app.get("/shapes/:roomId", async (req, res) => {
         createdAt: true,
         userId: true,
       },
-      orderBy: {
-        createdAt: "asc",
-      },
+      orderBy: { createdAt: "asc" },
     });
 
     res.status(200).json(shapes);
@@ -195,6 +237,9 @@ app.get("/shapes/:roomId", async (req, res) => {
   }
 });
 
+/**
+ * Start Express server on port 3001, listening on all interfaces.
+ */
 app.listen(3001, "0.0.0.0", () => {
   console.log("Backend listening on port 3001");
 });

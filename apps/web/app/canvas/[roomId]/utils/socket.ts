@@ -9,7 +9,7 @@ export function connectWebSocket(
 ) {
   if (socket && socket.readyState <= 1) return;
 
-  socket = new WebSocket(`ws://142.93.223.72:8081?token=${token}`);
+  socket = new WebSocket(`ws://localhost:8081?token=${token}`);
 
   socket.onopen = () => {
     console.log("WebSocket connected");
