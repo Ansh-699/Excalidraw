@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation'
 
 const page = () => {
   const router = useRouter()
+
+   useEffect(() => {
+    router.prefetch('/signin') // Helps preload that route
+    router.prefetch('/signup')
+  }, [router])
+  
   return (
     <div style={styles.container}>
       {/* Header */}
