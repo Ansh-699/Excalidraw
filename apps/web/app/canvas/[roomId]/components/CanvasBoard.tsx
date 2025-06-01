@@ -42,6 +42,34 @@ function isPointInShape(x: number, y: number, shape: DrawingShape): boolean {
   }
 }
 
+// Helper function to get coordinates from mouse or touch events
+function getEventCoords(e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) {
+  const rect = canvas.getBoundingClientRect();
+  let clientX: number, clientY: number;
+  
+  if ('touches' in e) {
+    // Touch event
+    if (e.touches.length > 0) {
+      clientX = e.touches[0]!.clientX;
+      clientY = e.touches[0]!.clientY;
+    } else if (e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0]!.clientX;
+      clientY = e.changedTouches[0]!.clientY;
+    } else {
+      return { x: 0, y: 0 };
+    }
+  } else {
+    // Mouse event
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
+  
+  return {
+    x: clientX - rect.left,
+    y: clientY - rect.top
+  };
+}
+
 export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const shapesRef = useRef<DrawingShape[]>([]);
@@ -58,6 +86,9 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
     const ctx = canvas.getContext("2d")!;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+
+    // Prevent default touch behaviors (scrolling, zooming)
+    canvas.style.touchAction = "none";
 
     // Join WebSocket room
     const token = localStorage.getItem("token") || "";
@@ -100,11 +131,12 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       drawAllShapes(ctx, shapesRef.current);
     };
 
-    // MOUSE DOWN: start drawing or erasing
-    const handleMouseDown = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+    // UNIFIED START HANDLER (mouse down / touch start)
+    const handleStart = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault(); // Prevent default touch behaviors
+      const coords = getEventCoords(e, canvas);
+      const x = coords.x;
+      const y = coords.y;
       startX = x;
       startY = y;
 
@@ -135,12 +167,14 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       }
     };
 
-    // MOUSE MOVE: draw a preview (temporary) shape or add points to pencil
-    const handleMouseMove = (e: MouseEvent) => {
+    // UNIFIED MOVE HANDLER (mouse move / touch move)
+    const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!drawing) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      e.preventDefault(); // Prevent scrolling on touch
+      
+      const coords = getEventCoords(e, canvas);
+      const x = coords.x;
+      const y = coords.y;
       const tool = currentToolRef.current;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -193,7 +227,6 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
             break;
 
           default:
-            // (Should never hit this if currentTool is one of the four)
             tempShape = {
               id: createShapeId(),
               type: "rectangle",
@@ -207,20 +240,21 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       }
     };
 
-    // MOUSE UP: commit the shape (push to array, broadcast, save to DB)
-    const handleMouseUp = (e: MouseEvent) => {
+    // UNIFIED END HANDLER (mouse up / touch end)
+    const handleEnd = (e: MouseEvent | TouchEvent) => {
       if (!drawing) return;
+      e.preventDefault();
       drawing = false;
       const tool = currentToolRef.current;
       if (tool === "eraser") return;
 
-      const rect = canvas.getBoundingClientRect();
-      const endX = e.clientX - rect.left;
-      const endY = e.clientY - rect.top;
+      const coords = getEventCoords(e, canvas);
+      const endX = coords.x;
+      const endY = coords.y;
 
       let newShape: DrawingShape;
       if (tool === "pencil") {
-        // Already added the first point on mousedown; just take last pencil stroke
+        // Already added the first point on start; just take last pencil stroke
         newShape = shapesRef.current.at(-1)!;
       } else {
         // Rectangle / Circle / Triangle
@@ -261,7 +295,6 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
             break;
 
           default:
-            // Fallback to rectangle
             newShape = {
               id: createShapeId(),
               type: "rectangle",
@@ -281,40 +314,53 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       drawAllShapes(ctx, shapesRef.current);
     };
 
-    // Attach event listeners
-    canvas.addEventListener("mousedown", handleMouseDown);
-    canvas.addEventListener("mousemove", handleMouseMove);
-    canvas.addEventListener("mouseup", handleMouseUp);
+    // Attach both mouse and touch event listeners
+    canvas.addEventListener("mousedown", handleStart);
+    canvas.addEventListener("mousemove", handleMove);
+    canvas.addEventListener("mouseup", handleEnd);
+    
+    // Touch events
+    canvas.addEventListener("touchstart", handleStart);
+    canvas.addEventListener("touchmove", handleMove);
+    canvas.addEventListener("touchend", handleEnd);
 
     // Initial draw
     redrawAll();
 
     return () => {
-      // Cleanup
-      canvas.removeEventListener("mousedown", handleMouseDown);
-      canvas.removeEventListener("mousemove", handleMouseMove);
-      canvas.removeEventListener("mouseup", handleMouseUp);
+      // Cleanup both mouse and touch events
+      canvas.removeEventListener("mousedown", handleStart);
+      canvas.removeEventListener("mousemove", handleMove);
+      canvas.removeEventListener("mouseup", handleEnd);
+      canvas.removeEventListener("touchstart", handleStart);
+      canvas.removeEventListener("touchmove", handleMove);
+      canvas.removeEventListener("touchend", handleEnd);
+      
       offMessageType("drawing", handleIncoming);
       offMessageType("existing_shapes", handleIncoming);
       offMessageType("erase_shape", handleIncoming);
     };
-  }, [roomId]); // Note: no currentTool here—handlers read from currentToolRef
+  }, [roomId]);
 
   // Separate effect: update cursor whenever currentTool changes (no canvas re-init)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     if (currentTool === "eraser") {
-      canvas.style.cursor = "crosshair"; // or set a custom eraser cursor
+      canvas.style.cursor = "crosshair";
     } else {
-      canvas.style.cursor = "crosshair"; // default for drawing tools
+      canvas.style.cursor = "crosshair";
     }
   }, [currentTool]);
 
   return (
     <canvas
       ref={canvasRef}
-      style={{ display: "block", cursor: "crosshair" }}
+      style={{ 
+        display: "block", 
+        cursor: "crosshair",
+        touchAction: "none" // Prevent default touch behaviors
+      }}
     />
   );
 }

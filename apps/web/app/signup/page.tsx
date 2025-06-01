@@ -2,19 +2,57 @@
 import React, { useState } from "react";
 import axios from "axios";
 import Link from "next/link";
-
+import { useRouter } from "next/navigation";
 export default function SignupPage() {
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const router = useRouter();
 
     const BACKEND_URL = "";
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+
+        try {
+            const res = await axios.post(`${BACKEND_URL}/signup`, {
+            username,
+            email,
+            password,
+            });
+
+            const token = res.data.token;
+            
+            const roomRes = await axios.post(
+            `${BACKEND_URL}/room-id`,
+            { name: `My Room ${Date.now().toString().slice(-4)}` },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+            );
+
+            const roomId = roomRes.data.roomId;
+            if (!roomId) {
+            setError("Room creation failed");
+            return;
+            }
+
+            router.push(`/canvas/${roomId}`);
+
+            setSuccess(true);
+        } catch (err: any) {
+            if (err.response && err.response.data && err.response.data.error) {
+            setError(err.response.data.error);
+            } else {
+            setError("Signup failed");
+            }
+        }
 
         try {
             const res = await axios.post(`${BACKEND_URL}/signup`, {
