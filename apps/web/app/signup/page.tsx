@@ -4,178 +4,176 @@ import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 export default function SignupPage() {
-    const [username, setUsername] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState(false);
-    const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const router = useRouter();
 
-    const BACKEND_URL = "";
+  const BACKEND_URL = "";
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
 
-        try {
-            const res = await axios.post(`${BACKEND_URL}/signup`, {
-            username,
-            email,
-            password,
-            });
+    try {
+      const res = await axios.post(`${BACKEND_URL}/signup`, {
+        username,
+        email,
+        password,
+      });
 
-            const token = res.data.token;
-            
-            const roomRes = await axios.post(
-            `${BACKEND_URL}/room-id`,
-            { name: `My Room ${Date.now().toString().slice(-4)}` },
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-            );
+      const token = res.data.token;
 
-            const roomId = roomRes.data.roomId;
-            if (!roomId) {
-            setError("Room creation failed");
-            return;
-            }
-
-            router.push(`/canvas/${roomId}`);
-
-            setSuccess(true);
-        } catch (err: any) {
-            if (err.response && err.response.data && err.response.data.error) {
-            setError(err.response.data.error);
-            } else {
-            setError("Signup failed");
-            }
+      const roomRes = await axios.post(
+        `${BACKEND_URL}/room-id`,
+        { name: `My Room ${Date.now().toString().slice(-4)}` },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
+      );
 
-        try {
-            const res = await axios.post(`${BACKEND_URL}/signup`, {
-                username,
-                email,
-                password,
-            });
+      const roomId = roomRes.data.roomId;
+      if (!roomId) {
+        setError("Room creation failed");
+        return;
+      }
 
-            setSuccess(true);
-        } catch (err: any) {
-            if (err.response && err.response.data && err.response.data.error) {
-                setError(err.response.data.error);
-            } else {
-                setError("Signup failed");
-            }
-        }
-    };
+      router.push(`/canvas/${roomId}`);
 
-    if (success) {
-        return (
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    minHeight: "100vh",
-                    backgroundColor: "#f0f0f0",
-                }}
-            >
-                <p style={{ color: "green", fontSize: "1.5em" }}>
-                    Signup successful! You can now sign in.
-                </p>
-            </div>
-        );
+      setSuccess(true);
+    } catch (err: any) {
+      if (err.response && err.response.data && err.response.data.error) {
+        setError(err.response.data.error);
+      } else {
+        setError("Signup failed");
+      }
     }
 
+    try {
+      const res = await axios.post(`${BACKEND_URL}/signup`, {
+        username,
+        email,
+        password,
+      });
+
+      setSuccess(true);
+    } catch (err: any) {
+      if (err.response && err.response.data && err.response.data.error) {
+        setError(err.response.data.error);
+      } else {
+        setError("Signup failed");
+      }
+    }
+  };
+
+  if (success) {
     return (
-        <div
-            style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                minHeight: "100vh",
-                backgroundColor: "#f0f0f0",
-            }}
-        >
-            <form
-                onSubmit={handleSubmit}
-                style={{
-                    width: "300px",
-                    padding: "20px",
-                    backgroundColor: "white",
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "10px",
-                }}
-            >
-                <h1 style={{ textAlign: "center", color: "#333" }}>Sign Up</h1>
-                {error && (
-                    <p style={{ color: "red", textAlign: "center" }}>{error}</p>
-                )}
-
-                <input
-                    type="text"
-                    placeholder="Username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    style={{
-                        padding: "10px",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
-                    }}
-                />
-
-                <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    style={{
-                        padding: "10px",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
-                    }}
-                />
-
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    style={{
-                        padding: "10px",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
-                    }}
-                />
-
-                <button
-                    type="submit"
-                    style={{
-                        padding: "10px 20px",
-                        backgroundColor: "#0070f3",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                    }}
-                >
-                    Sign Up
-                </button>
-                <p style={{ textAlign: "center" }}>
-                    Already have an account?{" "}
-                    <Link href="/signin" style={{ color: "#0070f3" }}>
-                        Sign In
-                    </Link>
-                </p>
-            </form>
-        </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          backgroundColor: "#f0f0f0",
+        }}
+      >
+        <p style={{ color: "green", fontSize: "1.5em" }}>
+          Signup successful! You can now sign in.
+        </p>
+      </div>
     );
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        backgroundColor: "#f0f0f0",
+      }}
+    >
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          width: "300px",
+          padding: "20px",
+          backgroundColor: "white",
+          borderRadius: "8px",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+        }}
+      >
+        <h1 style={{ textAlign: "center", color: "#333" }}>Sign Up</h1>
+        {error && <p style={{ color: "red", textAlign: "center" }}>{error}</p>}
+
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          style={{
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+          }}
+        />
+
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          style={{
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+          }}
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          style={{
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+          }}
+        />
+
+        <button
+          type="submit"
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#0070f3",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+        >
+          Sign Up
+        </button>
+        <p style={{ textAlign: "center" }}>
+          Already have an account?{" "}
+          <Link href="/signin" style={{ color: "#0070f3" }}>
+            Sign In
+          </Link>
+        </p>
+      </form>
+    </div>
+  );
 }
