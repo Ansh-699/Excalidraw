@@ -14,7 +14,7 @@ export interface BaseShape {
   type: ShapeType;
 }
 
-const BACKEND_URL = "http://localhost:3001";
+const BACKEND_URL = "http://142.93.223.72:3001";
 
 export interface RectShape extends BaseShape {
   type: "rectangle";

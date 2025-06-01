@@ -12,7 +12,7 @@ export default function SigninPage() {
     const router = useRouter();
 
     
-   const BACKEND_URL =  "http://localhost:3001";
+   const BACKEND_URL =  "http://142.93.223.72:3001";
 
 
 
@@ -40,7 +40,7 @@ export default function SigninPage() {
 
             // Step 2: Request room ID
             const roomRes = await axios.post(
-                "http://localhost:3001/room-id",
+                "http://142.93.223.72:3001/room-id",
                 { name: `My Room ${Date.now().toString().slice(-4)}` },
 
                 {

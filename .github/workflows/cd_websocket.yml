@@ -6,6 +6,7 @@ on:
 
 env:
   IMAGE_NAME: ansh7845/excalidraw-websocket
+  BACKEND_URL: http://142.93.223.72:3001
 
 jobs:
   build:
@@ -25,6 +26,8 @@ jobs:
         with:
           context: .
           file: ./docker/docker.websocket
+          build-args: |
+            REACT_APP_BACKEND_URL=${{ env.BACKEND_URL }}
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
@@ -35,5 +38,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
             docker stop excalidraw-websocket || true
             docker rm excalidraw-websocket || true
-            docker run --name excalidraw-websocket -d -p 8081:8081 ${{ env.IMAGE_NAME }}:${{ github.sha }}
-            "
+            docker run --name excalidraw-websocket -d -p 8081:8081 \
+              -e REACT_APP_BACKEND_URL=${{ env.BACKEND_URL }} \
+              ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          "

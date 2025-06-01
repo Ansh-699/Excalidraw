@@ -10,7 +10,7 @@ export default function SignupPage() {
     const [success, setSuccess] = useState(false);
 
 
-const BACKEND_URL =  "http://localhost:3001";
+const BACKEND_URL =  "http://142.93.223.72:3001";
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
