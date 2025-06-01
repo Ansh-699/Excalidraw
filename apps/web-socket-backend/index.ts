@@ -4,7 +4,6 @@ import { prisma } from "@repo/db/clients";
 import { config } from "@repo/backend-common/secret";
 
 const wss = new WebSocketServer({ port: 8081 });
-console.log("WebSocket server running on ws://142.93.223.72:8081");
 
 interface User {
   ws: WebSocket;

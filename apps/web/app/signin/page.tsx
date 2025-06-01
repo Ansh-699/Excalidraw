@@ -12,7 +12,7 @@ export default function SigninPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const BACKEND_URL = "http://142.93.223.72:3001";
+  const BACKEND_URL = "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
