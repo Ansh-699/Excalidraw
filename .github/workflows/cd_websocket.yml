@@ -40,5 +40,6 @@ jobs:
             docker rm excalidraw-websocket || true
             docker run --name excalidraw-websocket -d -p 8081:8081 \
               -e REACT_APP_BACKEND_URL=${{ env.BACKEND_URL }} \
+              -e DATABASE_URL='${{ secrets.DATABASE_URL }}' \
               ${{ env.IMAGE_NAME }}:${{ github.sha }}
           "

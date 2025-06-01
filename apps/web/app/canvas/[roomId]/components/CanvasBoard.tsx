@@ -71,7 +71,7 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawAllShapes(ctx, shapesRef.current);
     });
-
+  
     // When a WebSocket message arrives, update shapesRef and redraw
     const handleIncoming = (data: any) => {
       if (data.roomId !== roomId) return;
