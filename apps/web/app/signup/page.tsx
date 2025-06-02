@@ -3,21 +3,25 @@ import React, { useState } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 export default function SignupPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const BACKEND_URL = "";
+  const BACKEND_URL = ""; // <-- Replace with your actual backend URL
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
     try {
+      // Signup user
       const res = await axios.post(`${BACKEND_URL}/signup`, {
         username,
         email,
@@ -26,6 +30,7 @@ export default function SignupPage() {
 
       const token = res.data.token;
 
+      // Create room
       const roomRes = await axios.post(
         `${BACKEND_URL}/room-id`,
         { name: `My Room ${Date.now().toString().slice(-4)}` },
@@ -43,31 +48,16 @@ export default function SignupPage() {
         return;
       }
 
+      setSuccess(true);
       router.push(`/canvas/${roomId}`);
-
-      setSuccess(true);
     } catch (err: any) {
-      if (err.response && err.response.data && err.response.data.error) {
+      if (err.response?.data?.error) {
         setError(err.response.data.error);
       } else {
         setError("Signup failed");
       }
-    }
-
-    try {
-      const res = await axios.post(`${BACKEND_URL}/signup`, {
-        username,
-        email,
-        password,
-      });
-
-      setSuccess(true);
-    } catch (err: any) {
-      if (err.response && err.response.data && err.response.data.error) {
-        setError(err.response.data.error);
-      } else {
-        setError("Signup failed");
-      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -83,7 +73,7 @@ export default function SignupPage() {
         }}
       >
         <p style={{ color: "green", fontSize: "1.5em" }}>
-          Signup successful! You can now sign in.
+          Signup successful! Redirecting...
         </p>
       </div>
     );
@@ -156,17 +146,19 @@ export default function SignupPage() {
 
         <button
           type="submit"
+          disabled={loading}
           style={{
             padding: "10px 20px",
-            backgroundColor: "#0070f3",
+            backgroundColor: loading ? "#999" : "#0070f3",
             color: "white",
             border: "none",
             borderRadius: "4px",
-            cursor: "pointer",
+            cursor: loading ? "not-allowed" : "pointer",
           }}
         >
-          Sign Up
+          {loading ? "Signing Up..." : "Sign Up"}
         </button>
+
         <p style={{ textAlign: "center" }}>
           Already have an account?{" "}
           <Link href="/signin" style={{ color: "#0070f3" }}>
