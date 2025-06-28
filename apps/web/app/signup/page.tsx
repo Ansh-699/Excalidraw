@@ -6,11 +6,7 @@ import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import styles from "./styles.module.css";
 
-// Lazy load config to avoid bundle delays
-const getApiUrl = () => {
-  const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
-  return isProduction ? '' : 'http://localhost:3001';
-};
+import { API_BASE_URL } from "@repo/common/config";
 
 export default function SignupPage() {
   const [username, setUsername] = useState("");
@@ -27,10 +23,8 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const apiUrl = getApiUrl();
-      
       // Signup user
-      const res = await axios.post(`${apiUrl}/signup`, {
+      const res = await axios.post(`${API_BASE_URL}/signup`, {
         username,
         email,
         password,
@@ -48,7 +42,7 @@ export default function SignupPage() {
 
       // Create room
       const roomRes = await axios.post(
-        `${apiUrl}/room-id`,
+        `${API_BASE_URL}/room-id`,
         { name: `My Room ${Date.now().toString().slice(-4)}` },
         {
           headers: {
@@ -70,9 +64,8 @@ export default function SignupPage() {
         router.push(`/canvas/${roomId}`);
       }, 1500);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error && 'response' in err 
-        ? (err.response as any)?.data?.error || "Signup failed"
-        : "An unexpected error occurred";
+      const error = err as { response?: { data?: { error?: string } } };
+      const errorMessage = error.response?.data?.error || "Signup failed";
       setError(errorMessage);
     } finally {
       setLoading(false);

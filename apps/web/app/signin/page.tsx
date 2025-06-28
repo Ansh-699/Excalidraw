@@ -6,11 +6,7 @@ import Link from "next/link";
 import { LogIn } from "lucide-react";
 import styles from "./styles.module.css";
 
-// Lazy load config to avoid bundle delays
-const getApiUrl = () => {
-  const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
-  return isProduction ? '' : 'http://localhost:3001';
-};
+import { API_BASE_URL } from "@repo/common/config";
 
 export default function SigninPage() {
   const [email, setEmail] = useState("");
@@ -25,9 +21,7 @@ export default function SigninPage() {
     setLoading(true);
 
     try {
-      const apiUrl = getApiUrl();
-      
-      const res = await axios.post(`${apiUrl}/signin`, {
+      const res = await axios.post(`${API_BASE_URL}/signin`, {
         email,
         password,
       });
@@ -42,7 +36,7 @@ export default function SigninPage() {
       localStorage.setItem("token", token);
 
       const roomRes = await axios.post(
-        `${apiUrl}/room-id`,
+        `${API_BASE_URL}/room-id`,
         { name: `My Room ${Date.now().toString().slice(-4)}` },
         {
           headers: {
@@ -60,8 +54,9 @@ export default function SigninPage() {
       }
 
       router.push(`/canvas/${roomId}`);
-    } catch (err: any) {
-      setError(err.response?.data?.error || "An unexpected error occurred");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(error.response?.data?.error || "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -168,7 +163,7 @@ export default function SigninPage() {
 
           <div className={styles.signupLink}>
             <p>
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link href="/signup" className={styles.signupLinkText}>
                 Sign up for free
               </Link>

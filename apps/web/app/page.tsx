@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const page = () => {
+const HomePage = () => {
   const router = useRouter();
 
   // Temporarily remove prefetch
@@ -330,4 +330,4 @@ const styles = {
   },
 };
 
-export default page;
+export default HomePage;

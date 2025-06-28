@@ -10,12 +10,9 @@ const nextConfig = {
     formats: ['image/webp', 'image/avif'],
   },
   
-  // Enable SWC minification for faster builds
-  swcMinify: true,
-  
-  // Optimize bundle splitting
+  // Optimize bundle splitting - disable for now due to critters issue
   experimental: {
-    optimizeCss: true,
+    // optimizeCss: true, // Temporarily disabled
   },
   
   // Configure headers for better caching
