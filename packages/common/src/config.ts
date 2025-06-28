@@ -40,8 +40,8 @@ const config = {
   },
 } as const;
 
-// Export current environment configuration
-export const CONFIG = config[CURRENT_ENV];
+// Export current environment configuration - lazy evaluation
+export const getConfig = () => config[CURRENT_ENV];
 
 // Helper function to switch environments
 export const setEnvironment = (env: Environment) => {
@@ -59,7 +59,8 @@ export const isDev = () => CURRENT_ENV === 'local';
 export const isProduction = () => CURRENT_ENV === 'production';
 export const isDroplet = () => CURRENT_ENV === 'droplet';
 
-// Export individual values for convenience
+// Export individual values for convenience - lazy evaluation
+export const CONFIG = config[CURRENT_ENV];
 export const {
   DOMAIN,
   FRONTEND_URL,

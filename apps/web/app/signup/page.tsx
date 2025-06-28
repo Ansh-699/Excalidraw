@@ -3,7 +3,14 @@ import React, { useState } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { API_BASE_URL } from "@repo/common/config";
+import { UserPlus } from "lucide-react";
+import styles from "./styles.module.css";
+
+// Lazy load config to avoid bundle delays
+const getApiUrl = () => {
+  const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
+  return isProduction ? '' : 'http://localhost:3001';
+};
 
 export default function SignupPage() {
   const [username, setUsername] = useState("");
@@ -20,8 +27,10 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      const apiUrl = getApiUrl();
+      
       // Signup user
-      const res = await axios.post(`${API_BASE_URL}/signup`, {
+      const res = await axios.post(`${apiUrl}/signup`, {
         username,
         email,
         password,
@@ -29,9 +38,17 @@ export default function SignupPage() {
 
       const token = res.data.token;
 
+      if (!token) {
+        setError("Signup failed: No token received");
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("token", token);
+
       // Create room
       const roomRes = await axios.post(
-        `${API_BASE_URL}/room-id`,
+        `${apiUrl}/room-id`,
         { name: `My Room ${Date.now().toString().slice(-4)}` },
         {
           headers: {
@@ -44,17 +61,19 @@ export default function SignupPage() {
       const roomId = roomRes.data.roomId;
       if (!roomId) {
         setError("Room creation failed");
+        setLoading(false);
         return;
       }
 
       setSuccess(true);
-      router.push(`/canvas/${roomId}`);
-    } catch (err: any) {
-      if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError("Signup failed");
-      }
+      setTimeout(() => {
+        router.push(`/canvas/${roomId}`);
+      }, 1500);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error && 'response' in err 
+        ? (err.response as any)?.data?.error || "Signup failed"
+        : "An unexpected error occurred";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -62,109 +81,118 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-          backgroundColor: "#f0f0f0",
-        }}
-      >
-        <p style={{ color: "green", fontSize: "1.5em" }}>
-          Signup successful! Redirecting...
-        </p>
+      <div className={styles.container}>
+        <div className={styles.card}>
+          <div className={styles.cardContent}>
+            <div className={styles.success}>
+              🎉 Account created successfully! Redirecting to your canvas...
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "100vh",
-        backgroundColor: "#f0f0f0",
-      }}
-    >
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          width: "300px",
-          padding: "20px",
-          backgroundColor: "white",
-          borderRadius: "8px",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-        }}
-      >
-        <h1 style={{ textAlign: "center", color: "#333" }}>Sign Up</h1>
-        {error && <p style={{ color: "red", textAlign: "center" }}>{error}</p>}
+    <div className={styles.container}>
+      <nav className={styles.navbar}>
+        <Link href="/" className={styles.logoLink}>
+          <div className={styles.logoIcon}>
+            <div className={styles.logoIconInner} />
+          </div>
+          <span className={styles.logoText}>DrawBoard</span>
+        </Link>
+      </nav>
 
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-          style={{
-            padding: "10px",
-            borderRadius: "4px",
-            border: "1px solid #ccc",
-          }}
-        />
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <div className={styles.headerIcon}>
+            <UserPlus color="white" size={28} />
+          </div>
+          <h1 className={styles.cardTitle}>Create Account</h1>
+          <p className={styles.cardDescription}>
+            Join DrawBoard today and start creating amazing collaborative drawings with friends and colleagues
+          </p>
+        </div>
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{
-            padding: "10px",
-            borderRadius: "4px",
-            border: "1px solid #ccc",
-          }}
-        />
+        <div className={styles.cardContent}>
+          <form onSubmit={handleSubmit} className={styles.form}>
+            {error && <div className={styles.error}>{error}</div>}
+            
+            <div className={styles.inputGroup}>
+              <label htmlFor="username" className={styles.label}>
+                Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                placeholder="Choose a username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                className={styles.input}
+                autoComplete="username"
+              />
+            </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{
-            padding: "10px",
-            borderRadius: "4px",
-            border: "1px solid #ccc",
-          }}
-        />
+            <div className={styles.inputGroup}>
+              <label htmlFor="email" className={styles.label}>
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className={styles.input}
+                autoComplete="email"
+              />
+            </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: loading ? "#999" : "#0070f3",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: loading ? "not-allowed" : "pointer",
-          }}
-        >
-          {loading ? "Signing Up..." : "Sign Up"}
-        </button>
+            <div className={styles.inputGroup}>
+              <label htmlFor="password" className={styles.label}>
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                placeholder="Create a strong password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className={styles.input}
+                autoComplete="new-password"
+              />
+            </div>
 
-        <p style={{ textAlign: "center" }}>
-          Already have an account?{" "}
-          <Link href="/signin" style={{ color: "#0070f3" }}>
-            Sign In
-          </Link>
-        </p>
-      </form>
+            <button
+              type="submit"
+              className={styles.submitButton}
+              disabled={loading}
+            >
+              {loading ? (
+                <span className={styles.loading}>
+                  <span className={styles.spinner}></span>
+                  Creating account...
+                </span>
+              ) : (
+                "Create Account"
+              )}
+            </button>
+          </form>
+
+          <div className={styles.signinLink}>
+            <p>
+              Already have an account?{" "}
+              <Link href="/signin" className={styles.signinLinkText}>
+                Sign in here
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

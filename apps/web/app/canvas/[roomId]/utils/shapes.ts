@@ -1,7 +1,12 @@
 // utils/shapes.ts
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
-import { API_BASE_URL } from "@repo/common/config";
+
+// Lazy load config to avoid bundle delays
+const getApiUrl = () => {
+  const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
+  return isProduction ? '' : 'http://localhost:3001';
+};
 
 export type ShapeType =
   | "rectangle"
@@ -93,10 +98,11 @@ export function drawAllShapes(ctx: CanvasRenderingContext2D, shapes: DrawingShap
 }
 
 export async function getExistingShapes(roomId: string): Promise<DrawingShape[]> {
-  const token = localStorage.getItem("token"); // get token from localStorage
+  const token = localStorage.getItem("token");
+  const apiUrl = getApiUrl();
 
   const res = await axios.get<{ messages: Array<{ shape?: DrawingShape }> }>(
-    `${API_BASE_URL}/chats/${roomId}`,
+    `${apiUrl}/chats/${roomId}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -110,10 +116,11 @@ export async function getExistingShapes(roomId: string): Promise<DrawingShape[]>
 }
 
 export async function postShape(roomId: string, shape: DrawingShape) {
-  const token = localStorage.getItem("token"); // get token from localStorage
+  const token = localStorage.getItem("token");
+  const apiUrl = getApiUrl();
 
   await axios.post(
-    `${API_BASE_URL}/chats/${roomId}`,
+    `${apiUrl}/chats/${roomId}`,
     { shape },
     {
       headers: {

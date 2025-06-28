@@ -1,5 +1,10 @@
 // utils/socket.ts
-import { WEBSOCKET_URL_SECURE } from "@repo/common/config";
+
+// Lazy load config to avoid bundle delays
+const getWebSocketUrl = () => {
+  const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
+  return isProduction ? 'wss://excalidraw.anshtyagi.me/ws' : 'ws://localhost:8081';
+};
 
 let socket: WebSocket | null = null;
 const messageHandlers: { [type: string]: ((data: any) => void)[] } = {};
@@ -10,7 +15,9 @@ export function connectWebSocket(
 ) {
   if (socket && socket.readyState <= 1) return;
 
-socket = new WebSocket(`${WEBSOCKET_URL_SECURE}?token=${token}`);
+  const wsUrl = getWebSocketUrl();
+  socket = new WebSocket(`${wsUrl}?token=${token}`);
+  
   socket.onopen = () => {
     console.log("WebSocket connected");
     if (onOpenCallback) onOpenCallback();
