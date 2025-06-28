@@ -6,6 +6,8 @@ on:
 
 env:
   IMAGE_NAME: ansh7845/excalidraw-backend
+  DOMAIN: excalidraw.anshtyagi.me
+  DROPLET_IP: 142.93.223.72
 
 jobs:
   build:
@@ -33,7 +35,7 @@ jobs:
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
           chmod 600 ~/ssh_key
-          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
+          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@${{ env.DROPLET_IP }} -t "
             docker stop excalidraw-backend || true
             docker rm excalidraw-backend || true
             docker run --name excalidraw-backend -d -p 3001:3001 \

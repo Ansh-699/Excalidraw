@@ -1,6 +1,7 @@
 // utils/shapes.ts
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
+import { API_BASE_URL } from "@repo/common/config";
 
 export type ShapeType =
   | "rectangle"
@@ -13,8 +14,6 @@ export interface BaseShape {
   id: string; // unique shape id for identification & erasing
   type: ShapeType;
 }
-
-const BACKEND_URL = "";
 
 export interface RectShape extends BaseShape {
   type: "rectangle";
@@ -97,7 +96,7 @@ export async function getExistingShapes(roomId: string): Promise<DrawingShape[]>
   const token = localStorage.getItem("token"); // get token from localStorage
 
   const res = await axios.get<{ messages: Array<{ shape?: DrawingShape }> }>(
-    `${BACKEND_URL}/chats/${roomId}`,
+    `${API_BASE_URL}/chats/${roomId}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -114,7 +113,7 @@ export async function postShape(roomId: string, shape: DrawingShape) {
   const token = localStorage.getItem("token"); // get token from localStorage
 
   await axios.post(
-    `${BACKEND_URL}/chats/${roomId}`,
+    `${API_BASE_URL}/chats/${roomId}`,
     { shape },
     {
       headers: {

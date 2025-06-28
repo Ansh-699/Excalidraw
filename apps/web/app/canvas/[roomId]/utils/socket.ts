@@ -1,4 +1,5 @@
 // utils/socket.ts
+import { WEBSOCKET_URL_SECURE } from "@repo/common/config";
 
 let socket: WebSocket | null = null;
 const messageHandlers: { [type: string]: ((data: any) => void)[] } = {};
@@ -9,7 +10,7 @@ export function connectWebSocket(
 ) {
   if (socket && socket.readyState <= 1) return;
 
-socket = new WebSocket(`wss://excalidraw.anshtyagi.me/ws?token=${token}`);
+socket = new WebSocket(`${WEBSOCKET_URL_SECURE}?token=${token}`);
   socket.onopen = () => {
     console.log("WebSocket connected");
     if (onOpenCallback) onOpenCallback();

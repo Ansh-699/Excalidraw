@@ -4,6 +4,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LogIn } from "lucide-react";
+import { API_BASE_URL } from "@repo/common/config";
 
 export default function SigninPage() {
   const [email, setEmail] = useState("");
@@ -12,15 +13,13 @@ export default function SigninPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const BACKEND_URL = "";
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const res = await axios.post(`${BACKEND_URL}/signin`, {
+      const res = await axios.post(`${API_BASE_URL}/signin`, {
         email,
         password,
       });
@@ -35,7 +34,7 @@ export default function SigninPage() {
       localStorage.setItem("token", token);
 
       const roomRes = await axios.post(
-        `${BACKEND_URL}/room-id`,
+        `${API_BASE_URL}/room-id`,
         { name: `My Room ${Date.now().toString().slice(-4)}` },
         {
           headers: {

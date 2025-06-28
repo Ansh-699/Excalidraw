@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "@repo/common/config";
 
 export default function SignupPage() {
   const [username, setUsername] = useState("");
@@ -13,8 +14,6 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const BACKEND_URL = ""; // <-- Replace with your actual backend URL
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -22,7 +21,7 @@ export default function SignupPage() {
 
     try {
       // Signup user
-      const res = await axios.post(`${BACKEND_URL}/signup`, {
+      const res = await axios.post(`${API_BASE_URL}/signup`, {
         username,
         email,
         password,
@@ -32,7 +31,7 @@ export default function SignupPage() {
 
       // Create room
       const roomRes = await axios.post(
-        `${BACKEND_URL}/room-id`,
+        `${API_BASE_URL}/room-id`,
         { name: `My Room ${Date.now().toString().slice(-4)}` },
         {
           headers: {

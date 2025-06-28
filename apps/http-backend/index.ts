@@ -13,6 +13,41 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Initialize database connection on startup
+async function initializeDatabase() {
+  try {
+    await prisma.$connect();
+    console.log("✅ Database connected successfully");
+    // Test the connection with a simple query
+    await prisma.$queryRaw`SELECT 1`;
+    console.log("✅ Database query test successful");
+  } catch (error) {
+    console.error("❌ Database connection failed:", error);
+    process.exit(1);
+  }
+}
+
+// Health check endpoint
+app.get("/health", async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Test database connection
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ 
+      status: "healthy", 
+      timestamp: new Date().toISOString(),
+      database: "connected"
+    });
+  } catch (error) {
+    console.error("Health check failed:", error);
+    res.status(503).json({ 
+      status: "unhealthy", 
+      timestamp: new Date().toISOString(),
+      database: "disconnected",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 /**
  * POST /signup
  * Creates a new user (username, email, password hashed via bcrypt).
@@ -240,6 +275,17 @@ app.get("/shapes/:roomId", async (req: Request, res: Response): Promise<void> =>
 /**
  * Start Express server on port 3001, listening on all interfaces.
  */
-app.listen(3001, "0.0.0.0", () => {
-  console.log("Backend listening on port 3001");
+async function startServer() {
+  // Initialize database connection first
+  await initializeDatabase();
+  
+  app.listen(3001, "0.0.0.0", () => {
+    console.log("🚀 Backend listening on port 3001");
+  });
+}
+
+// Start the server
+startServer().catch((error) => {
+  console.error("❌ Failed to start server:", error);
+  process.exit(1);
 });

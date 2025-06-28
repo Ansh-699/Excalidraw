@@ -5,6 +5,8 @@ import { config } from "@repo/backend-common/secret";
 
 const wss = new WebSocketServer({ port: 8081 });
 
+console.log("WebSocket server listening on port 8081");
+
 interface User {
   ws: WebSocket;
   rooms: string[];

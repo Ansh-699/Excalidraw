@@ -8,7 +8,8 @@
     "@repo/typescript-config": "workspace:^"
   },
   "exports": {
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./config": "./src/config.ts"
   },
   "peerDependencies": {
     "typescript": "^5"

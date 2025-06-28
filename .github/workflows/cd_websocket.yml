@@ -6,6 +6,8 @@ on:
 
 env:
   IMAGE_NAME: ansh7845/excalidraw-websocket
+  DOMAIN: excalidraw.anshtyagi.me
+  DROPLET_IP: 142.93.223.72
   BACKEND_URL: http://142.93.223.72:3001
 
 jobs:
@@ -35,7 +37,7 @@ jobs:
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
           chmod 600 ~/ssh_key
-          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
+          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@${{ env.DROPLET_IP }} -t "
             docker stop excalidraw-websocket || true
             docker rm excalidraw-websocket || true
             docker run --name excalidraw-websocket -d -p 8081:8081 \

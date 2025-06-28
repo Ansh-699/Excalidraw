@@ -1,8 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 
-
-
-export const prisma = new PrismaClient()
+// Create Prisma client with optimized connection pooling
+export const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+  log: ['error', 'warn'],
+});
 
 
 

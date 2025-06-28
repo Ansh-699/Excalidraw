@@ -6,7 +6,8 @@ on:
 
 env:
   IMAGE_NAME: ansh7845/excalidraw-frontend
-  BACKEND_URL: http://142.93.223.72:3001
+  DOMAIN: excalidraw.anshtyagi.me
+  BACKEND_URL: https://excalidraw.anshtyagi.me
 
 jobs: 
   build:
@@ -36,7 +37,7 @@ jobs:
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
           chmod 600 ~/ssh_key
-          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@142.93.223.72 -t "
+          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@${{ env.DOMAIN }} -t "
             docker stop excalidraw-frontend || true
             docker rm excalidraw-frontend || true
             docker run --name excalidraw-frontend -d -p 3000:3000 \
