@@ -5,7 +5,8 @@ import { v4 as uuidv4 } from "uuid";
 // Lazy load config to avoid bundle delays
 const getApiUrl = () => {
   const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
-  return isProduction ? '' : 'http://localhost:3001';
+  const apiUrl = process.env.NEXT_PUBLIC_BACKEND_URL || (isProduction ? '' : 'http://localhost:3001');
+  return apiUrl;
 };
 
 export type ShapeType =

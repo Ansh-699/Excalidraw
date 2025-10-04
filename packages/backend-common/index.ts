@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 export const config = {
-    jwtSecret: 'anshtyagi'
+    jwtSecret: process.env.JWT_SECRET || 'anshtyagi'
 };

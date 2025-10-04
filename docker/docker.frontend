@@ -1,17 +1,83 @@
-FROM oven/bun:1
+# Multi-stage build for optimized production image
+FROM oven/bun:1 AS base
 
-ARG DB_URL
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 WORKDIR /usr/src/app
 
+# Copy package files for dependency installation
+COPY package.json bun.lockb* ./
+COPY packages/*/package.json ./packages/*/
+COPY apps/*/package.json ./apps/*/
+
+# Development stage
+FROM base AS development
+RUN bun install --frozen-lockfile
+COPY . .
+RUN bun run generate:db
+EXPOSE 3000
+CMD ["bun", "run", "dev"]
+
+# Dependencies stage
+FROM base AS deps
+RUN bun install --frozen-lockfile
+
+# Build stage
+FROM base AS build
+
+# Copy dependencies
+COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY . .
 
-RUN bun install
+# Build arguments for Next.js
+ARG NODE_ENV=production
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_WEBSOCKET_URL
 
+# Set environment variables for build
+ENV NODE_ENV=$NODE_ENV
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+ENV NEXT_PUBLIC_WEBSOCKET_URL=$NEXT_PUBLIC_WEBSOCKET_URL
+
+# Generate Prisma client and build
 RUN bun run generate:db
-RUN DB_URL=$DB_URL bunx turbo build --filter=web...
+RUN bunx turbo build --filter=web...
 
-EXPOSE 3000
+# Production stage
+FROM oven/bun:1-slim AS production
 
-# Start the frontend application
-CMD ["bun", "start:frontend"]
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user for security
+RUN groupadd -r nextjs && useradd -r -g nextjs nextjs
+
+WORKDIR /usr/src/app
+
+# Copy built application
+COPY --from=build --chown=nextjs:nextjs /usr/src/app/apps/web/.next ./apps/web/.next
+COPY --from=build --chown=nextjs:nextjs /usr/src/app/apps/web/public ./apps/web/public
+COPY --from=build --chown=nextjs:nextjs /usr/src/app/apps/web/package.json ./apps/web/package.json
+COPY --from=build --chown=nextjs:nextjs /usr/src/app/package.json ./package.json
+COPY --from=build --chown=nextjs:nextjs /usr/src/app/node_modules ./node_modules
+
+# Switch to non-root user
+USER nextjs
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV FRONTEND_PORT=3000
+
+EXPOSE ${FRONTEND_PORT:-3000}
+
+# Use exec form for better signal handling
+CMD ["bun", "run", "start:frontend"]

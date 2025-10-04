@@ -1,5 +1,3 @@
- import { FRONTEND_URL } from "@repo/common/config";
+import { WEBSOCKET_URL_SECURE } from "@repo/common/config";
 
-export const WEBHOOKS_CONFIG = {
-    url: FRONTEND_URL,
-}
+export const WEBHOOKS_CONFIG = WEBSOCKET_URL_SECURE;

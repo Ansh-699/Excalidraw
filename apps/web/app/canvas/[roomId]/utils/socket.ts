@@ -3,7 +3,8 @@
 // Lazy load config to avoid bundle delays
 const getWebSocketUrl = () => {
   const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
-  return isProduction ? 'wss://excalidraw.anshtyagi.me/ws' : 'ws://localhost:8081';
+  const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || (isProduction ? 'wss://excalidraw.anshtyagi.me/ws' : 'ws://localhost:8081');
+  return wsUrl;
 };
 
 let socket: WebSocket | null = null;

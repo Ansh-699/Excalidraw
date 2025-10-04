@@ -3,20 +3,24 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "dependencies": {
+    "ws": "^8.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.0.3",
+    "@repo/backend-common": "workspace:^",
+    "@repo/common": "workspace:^",
+    "@repo/db": "workspace:^"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@repo/typescript-config": "workspace:^",
     "@types/ws": "^8.18.1",
-    "ws": "^8.18.2",
-    "@repo/backend-common": "workspace:^",
-    "@repo/common": "workspace:^",
-    "@repo/db": "workspace:^"
-
+    "@types/jsonwebtoken": "^9.0.7"
   },
   "scripts": {
     "build": "tsc --b",
-    "dev": "bun run build && bun run start",
-    "start": "bun dist/index.js"
+    "dev": "bun run index.ts",
+    "start": "bun run index.ts"
   },
   "peerDependencies": {
     "typescript": "^5"

@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/docker.backend
+      target: development
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_URL=${DB_URL}
+      - JWT_SECRET=${JWT_SECRET:-dev-secret}
+      - HTTP_PORT=${HTTP_PORT:-3001}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3003}
+    ports:
+      - "${HTTP_PORT:-3001}:${HTTP_PORT:-3001}"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  websocket:
+    build:
+      context: .
+      dockerfile: docker/docker.websocket
+      target: development
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_URL=${DB_URL}
+      - JWT_SECRET=${JWT_SECRET:-dev-secret}
+      - WS_PORT=${WS_PORT:-8081}
+    ports:
+      - "${WS_PORT:-8081}:${WS_PORT:-8081}"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/docker.frontend
+      target: development
+    environment:
+      - NODE_ENV=development
+      - FRONTEND_PORT=${FRONTEND_PORT:-3000}
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://localhost:3001}
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-ws://localhost:8081}
+    ports:
+      - "${FRONTEND_PORT:-3000}:${FRONTEND_PORT:-3000}"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - backend
+      - websocket
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

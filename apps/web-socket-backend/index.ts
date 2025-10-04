@@ -1,11 +1,14 @@
+import "dotenv/config";
 import { WebSocketServer, WebSocket } from "ws";
 import jwt from "jsonwebtoken";
 import { prisma } from "@repo/db/clients";
 import { config } from "@repo/backend-common/secret";
 
-const wss = new WebSocketServer({ port: 8081 });
+const PORT = process.env.WS_PORT ? parseInt(process.env.WS_PORT) : 8081;
+const wss = new WebSocketServer({ port: PORT });
 
-console.log("WebSocket server listening on port 8081");
+console.log(`WebSocket server listening on port ${PORT}`);
+console.log("Database connection:", process.env.DATABASE_URL ? "✓ Found" : "✗ Missing");
 
 interface User {
   ws: WebSocket;

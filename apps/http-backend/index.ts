@@ -11,7 +11,16 @@ import { prisma } from "@repo/db/clients";
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+// Configure CORS with environment variables
+const corsOrigins = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000', 'http://localhost:3003'];
+
+app.use(cors({
+  origin: corsOrigins,
+  credentials: true
+}));
 
 // Initialize database connection on startup
 async function initializeDatabase() {
@@ -118,8 +127,8 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Hardcoded JWT secret; consider moving to env var
-    const token = jwt.sign({ userid: user.id }, "anshtyagi", { expiresIn: "1h" });
+    const jwtSecret = process.env.JWT_SECRET || "anshtyagi";
+    const token = jwt.sign({ userid: user.id }, jwtSecret, { expiresIn: "1h" });
     res.status(200).json({ message: "Sign in successful", token });
   } catch (err) {
     console.error("Signin error:", err);
@@ -273,14 +282,15 @@ app.get("/shapes/:roomId", async (req: Request, res: Response): Promise<void> =>
 });
 
 /**
- * Start Express server on port 3001, listening on all interfaces.
+ * Start Express server on configurable port, listening on all interfaces.
  */
 async function startServer() {
   // Initialize database connection first
   await initializeDatabase();
   
-  app.listen(3001, "0.0.0.0", () => {
-    console.log("🚀 Backend listening on port 3001");
+  const PORT = process.env.HTTP_PORT ? parseInt(process.env.HTTP_PORT) : 3001;
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 Backend listening on port ${PORT}`);
   });
 }
 
