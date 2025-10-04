@@ -2,39 +2,33 @@
 
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Sparkles, Users, Download, Palette } from "lucide-react";
 
 const HomePage = () => {
   const router = useRouter();
 
-  // Temporarily remove prefetch
   useEffect(() => {}, []);
 
   return (
-    <div style={styles.container}>
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-purple-50 flex flex-col">
       {/* Header */}
-      <header style={styles.header}>
-        <div style={styles.logoContainer}>
-          <div style={styles.logoIcon}>
-            <svg style={styles.logoSvg} fill="currentColor" viewBox="0 0 20 20">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-            </svg>
+      <header className="flex justify-between items-center p-6 lg:p-8">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Palette className="w-6 h-6 text-white" />
           </div>
-          <h1 style={styles.logoText}>DrawBoard</h1>
+          <h1 className="text-2xl font-bold text-gray-900">DrawBoard</h1>
         </div>
-        <div style={styles.headerButtons}>
+        <div className="flex items-center gap-4">
           <button
-            onClick={() => {
-              console.log("Navigating to /signin");
-              router.push("/signin");
-            }}
-            style={styles.signInButton}
+            onClick={() => router.push("/signin")}
+            className="text-primary-600 hover:text-primary-700 font-medium px-4 py-2 rounded-lg hover:bg-primary-50 transition-all duration-200"
           >
             Sign In
           </button>
-
           <button
             onClick={() => router.push("/signup")}
-            style={styles.signUpButton}
+            className="btn-primary"
           >
             Sign Up
           </button>
@@ -42,82 +36,83 @@ const HomePage = () => {
       </header>
 
       {/* Main Content */}
-      <main style={styles.main}>
-        <h2 style={styles.mainTitle}>Collaborate visually with your team</h2>
-        <p style={styles.mainDescription}>
-          Create beautiful diagrams, wireframes, and sketches together in
-          real-time. Perfect for brainstorming, planning, and visual
-          collaboration.
-        </p>
+      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <div className="animate-fade-in">
+          <h2 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+            Collaborate visually with{" "}
+            <span className="gradient-text">your team</span>
+          </h2>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
+            Create beautiful diagrams, wireframes, and sketches together in
+            real-time. Perfect for brainstorming, planning, and visual
+            collaboration.
+          </p>
 
-        <div style={styles.ctaButtons}>
-          <button style={styles.startButton}>Start Drawing</button>
-          <button style={styles.demoButton}>View Demo</button>
-        </div>
+          <div className="flex flex-col sm:flex-row gap-4 mb-12 justify-center">
+            <button className="btn-primary text-lg px-8 py-4 animate-bounce-in">
+              <Sparkles className="w-5 h-5 mr-2" />
+              Start Drawing
+            </button>
+            <button className="btn-secondary text-lg px-8 py-4 animate-slide-up">
+              View Demo
+            </button>
+          </div>
 
-        {/* Feature Preview */}
-        <div style={styles.previewContainer}>
-          <div style={styles.canvasPreview}>
-            <div style={styles.canvasPlaceholder}>Canvas Preview</div>
+          {/* Feature Preview */}
+          <div className="card-glass p-8 max-w-4xl mx-auto animate-slide-up">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl h-64 flex items-center justify-center border-2 border-dashed border-gray-300">
+              <div className="text-center">
+                <Palette className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500 text-lg font-medium">Canvas Preview</p>
+                <p className="text-gray-400 text-sm mt-1">Your creative space awaits</p>
+              </div>
+            </div>
           </div>
         </div>
       </main>
 
       {/* Features Section */}
-      <section style={styles.featuresSection}>
-        <div style={styles.featuresContainer}>
-          <h3 style={styles.featuresTitle}>
-            Everything you need to visualize ideas
+      <section className="py-16 px-6">
+        <div className="max-w-6xl mx-auto">
+          <h3 className="text-3xl lg:text-4xl font-bold text-center text-gray-900 mb-12">
+            Everything you need to{" "}
+            <span className="gradient-text">visualize ideas</span>
           </h3>
-          <div style={styles.featuresGrid}>
-            <div style={styles.featureItem}>
-              <div style={styles.featureIconPurple}>
-                <svg
-                  style={styles.featureIcon}
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                </svg>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center group hover:scale-105 transition-transform duration-300">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:shadow-glow transition-all duration-300">
+                <Sparkles className="w-8 h-8 text-primary-600" />
               </div>
-              <h4 style={styles.featureTitle}>Infinite Canvas</h4>
-              <p style={styles.featureDescription}>
+              <h4 className="text-xl font-semibold text-gray-900 mb-3">
+                Infinite Canvas
+              </h4>
+              <p className="text-gray-600 leading-relaxed">
                 Draw without limits on an infinite canvas that scales with your
-                ideas
+                ideas and creativity.
               </p>
             </div>
-            <div style={styles.featureItem}>
-              <div style={styles.featureIconBlue}>
-                <svg
-                  style={styles.featureIcon}
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            
+            <div className="text-center group hover:scale-105 transition-transform duration-300">
+              <div className="w-16 h-16 bg-gradient-to-br from-secondary-100 to-secondary-200 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:shadow-glow transition-all duration-300">
+                <Users className="w-8 h-8 text-secondary-600" />
               </div>
-              <h4 style={styles.featureTitle}>Real-time Collaboration</h4>
-              <p style={styles.featureDescription}>
-                Work together seamlessly with your team in real-time
+              <h4 className="text-xl font-semibold text-gray-900 mb-3">
+                Real-time Collaboration
+              </h4>
+              <p className="text-gray-600 leading-relaxed">
+                Work together seamlessly with your team in real-time, no matter where you are.
               </p>
             </div>
-            <div style={styles.featureItem}>
-              <div style={styles.featureIconGreen}>
-                <svg
-                  style={styles.featureIcon}
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+            
+            <div className="text-center group hover:scale-105 transition-transform duration-300">
+              <div className="w-16 h-16 bg-gradient-to-br from-success-100 to-success-200 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:shadow-glow transition-all duration-300">
+                <Download className="w-8 h-8 text-success-600" />
               </div>
-              <h4 style={styles.featureTitle}>Export & Share</h4>
-              <p style={styles.featureDescription}>
-                Export your drawings in multiple formats and share easily
+              <h4 className="text-xl font-semibold text-gray-900 mb-3">
+                Export & Share
+              </h4>
+              <p className="text-gray-600 leading-relaxed">
+                Export your drawings in multiple formats and share them easily with anyone.
               </p>
             </div>
           </div>
@@ -125,209 +120,6 @@ const HomePage = () => {
       </section>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    minHeight: "100vh",
-    background: "linear-gradient(to bottom right, #faf5ff, #eff6ff)",
-    display: "flex",
-    flexDirection: "column" as const,
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "1.5rem",
-  },
-  logoContainer: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.5rem",
-  },
-  logoIcon: {
-    width: "2rem",
-    height: "2rem",
-    backgroundColor: "#9333ea",
-    borderRadius: "0.5rem",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoSvg: {
-    width: "1.25rem",
-    height: "1.25rem",
-    color: "white",
-  },
-  logoText: {
-    fontSize: "1.5rem",
-    fontWeight: "bold",
-    color: "#1f2937",
-    margin: 0,
-  },
-  headerButtons: {
-    display: "flex",
-    gap: "1rem",
-  },
-  signInButton: {
-    padding: "0.5rem 1rem",
-    color: "#9333ea",
-    backgroundColor: "transparent",
-    border: "none",
-    cursor: "pointer",
-    transition: "color 0.2s",
-  },
-  signUpButton: {
-    padding: "0.5rem 1.5rem",
-    backgroundColor: "#9333ea",
-    color: "white",
-    border: "none",
-    borderRadius: "0.5rem",
-    cursor: "pointer",
-    transition: "background-color 0.2s",
-  },
-  main: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column" as const,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "0 1.5rem",
-    textAlign: "center" as const,
-  },
-  mainTitle: {
-    fontSize: "3rem",
-    fontWeight: "bold",
-    color: "#111827",
-    marginBottom: "1.5rem",
-    margin: "0 0 1.5rem 0",
-  },
-  mainDescription: {
-    fontSize: "1.25rem",
-    color: "#4b5563",
-    marginBottom: "2rem",
-    maxWidth: "32rem",
-    lineHeight: 1.6,
-    margin: "0 0 2rem 0",
-  },
-  ctaButtons: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "1rem",
-    marginBottom: "3rem",
-  },
-  startButton: {
-    padding: "1rem 2rem",
-    backgroundColor: "#9333ea",
-    color: "white",
-    fontSize: "1.125rem",
-    fontWeight: "600",
-    border: "none",
-    borderRadius: "0.5rem",
-    cursor: "pointer",
-    transition: "background-color 0.2s",
-  },
-  demoButton: {
-    padding: "1rem 2rem",
-    border: "2px solid #9333ea",
-    color: "#9333ea",
-    backgroundColor: "transparent",
-    fontSize: "1.125rem",
-    fontWeight: "600",
-    borderRadius: "0.5rem",
-    cursor: "pointer",
-    transition: "background-color 0.2s",
-  },
-  previewContainer: {
-    backgroundColor: "white",
-    borderRadius: "0.75rem",
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-    padding: "2rem",
-    maxWidth: "56rem",
-    width: "100%",
-  },
-  canvasPreview: {
-    backgroundColor: "#f3f4f6",
-    borderRadius: "0.5rem",
-    height: "16rem",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  canvasPlaceholder: {
-    color: "#6b7280",
-    fontSize: "1.125rem",
-  },
-  featuresSection: {
-    padding: "4rem 1.5rem",
-  },
-  featuresContainer: {
-    maxWidth: "72rem",
-    margin: "0 auto",
-  },
-  featuresTitle: {
-    fontSize: "1.875rem",
-    fontWeight: "bold",
-    textAlign: "center" as const,
-    color: "#111827",
-    marginBottom: "3rem",
-    margin: "0 0 3rem 0",
-  },
-  featuresGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-    gap: "2rem",
-  },
-  featureItem: {
-    textAlign: "center" as const,
-  },
-  featureIconPurple: {
-    width: "3rem",
-    height: "3rem",
-    backgroundColor: "#f3e8ff",
-    borderRadius: "0.5rem",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    margin: "0 auto 1rem auto",
-  },
-  featureIconBlue: {
-    width: "3rem",
-    height: "3rem",
-    backgroundColor: "#dbeafe",
-    borderRadius: "0.5rem",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    margin: "0 auto 1rem auto",
-  },
-  featureIconGreen: {
-    width: "3rem",
-    height: "3rem",
-    backgroundColor: "#dcfce7",
-    borderRadius: "0.5rem",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    margin: "0 auto 1rem auto",
-  },
-  featureIcon: {
-    width: "1.5rem",
-    height: "1.5rem",
-    color: "#9333ea",
-  },
-  featureTitle: {
-    fontSize: "1.25rem",
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: "0.5rem",
-    margin: "0 0 0.5rem 0",
-  },
-  featureDescription: {
-    color: "#4b5563",
-    lineHeight: 1.6,
-    margin: 0,
-  },
 };
 
 export default HomePage;
