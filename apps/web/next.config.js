@@ -5,6 +5,9 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
   
+  // Ensure workspace packages are transpiled
+  transpilePackages: ["@repo/common"],
+
   // Optimize images and static assets
   images: {
     formats: ['image/webp', 'image/avif'],
