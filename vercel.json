@@ -1,3 +1,11 @@
 {
-  "installCommand": "pnpm install"
+  "version": 2,
+  "installCommand": "npm ci",
+  "ignoreCommand": "npx turbo-ignore --filter=web",
+  "builds": [
+    { "src": "apps/web/next.config.js", "use": "@vercel/next" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "apps/web/$1" }
+  ]
 }

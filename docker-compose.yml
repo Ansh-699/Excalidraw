@@ -1,6 +1,18 @@
-version: '3.8'
-
 services:
+  postgres:
+    image: postgres:15-alpine
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U excalidraw-db_owner -d excalidraw-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
   # Database service (optional - if you want to run PostgreSQL locally)
   # postgres:
   #   image: postgres:15-alpine
@@ -26,15 +38,11 @@ services:
       target: production
       args:
         - NODE_ENV=production
+    env_file:
+      - .env
     environment:
       - NODE_ENV=${NODE_ENV:-production}
-      - DATABASE_URL=${DATABASE_URL}
-      - DB_URL=${DB_URL}
-      - JWT_SECRET=${JWT_SECRET}
       - HTTP_PORT=${HTTP_PORT:-3001}
-      - CORS_ORIGINS=${CORS_ORIGINS}
-    ports:
-      - "${HTTP_PORT:-3001}:${HTTP_PORT:-3001}"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${HTTP_PORT:-3001}/health"]
@@ -44,9 +52,9 @@ services:
       start_period: 40s
     networks:
       - app-network
-    # depends_on:
-    #   postgres:
-    #     condition: service_healthy
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   websocket:
     build:
@@ -55,22 +63,17 @@ services:
       target: production
       args:
         - NODE_ENV=production
+    env_file:
+      - .env
     environment:
       - NODE_ENV=${NODE_ENV:-production}
-      - DATABASE_URL=${DATABASE_URL}
-      - DB_URL=${DB_URL}
-      - JWT_SECRET=${JWT_SECRET}
       - WS_PORT=${WS_PORT:-8081}
-    ports:
-      - "${WS_PORT:-8081}:${WS_PORT:-8081}"
     restart: unless-stopped
     networks:
       - app-network
     depends_on:
       - backend
-    # depends_on:
-    #   postgres:
-    #     condition: service_healthy
+      - postgres
 
   frontend:
     build:
@@ -81,19 +84,23 @@ services:
         - NODE_ENV=production
         - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
         - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
+    env_file:
+      - .env
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - FRONTEND_PORT=${FRONTEND_PORT:-3000}
-      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
-      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
-    ports:
-      - "${FRONTEND_PORT:-3000}:${FRONTEND_PORT:-3000}"
     depends_on:
       - backend
       - websocket
     restart: unless-stopped
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:${FRONTEND_PORT:-3000}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # Nginx reverse proxy (optional but recommended for production)
   nginx:
@@ -116,5 +123,5 @@ networks:
   app-network:
     driver: bridge
 
-# volumes:
-#   postgres_data:
+volumes:
+  postgres_data:

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   // Optimize for faster page loads
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',

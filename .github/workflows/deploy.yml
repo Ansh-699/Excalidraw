@@ -1,0 +1,52 @@
+name: Deploy to Droplet
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-to-droplet
+  cancel-in-progress: false
+
+env:
+  REMOTE_DIR: /opt/excalidraw
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync project to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: |
+            .
+            !.git/**
+            !**/node_modules/**
+            !**/.turbo/**
+            !apps/web/.next/**
+          target: ${{ env.REMOTE_DIR }}
+          overwrite: true
+
+      - name: Build and restart stack on droplet
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd $REMOTE_DIR
+            docker compose version
+            # Build updated images and restart only changed services
+            docker compose build
+            docker compose up -d
+            # Apply prisma migrations (non-fatal if already applied)
+            docker compose exec -T backend bunx prisma migrate deploy --schema=./packages/db/prisma/schema.prisma || true
+            docker compose ps

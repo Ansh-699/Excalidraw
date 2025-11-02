@@ -10,10 +10,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /usr/src/app
 
-# Copy package files for dependency installation
-COPY package.json bun.lockb* ./
-COPY packages/*/package.json ./packages/*/
-COPY apps/*/package.json ./apps/*/
+# (Skipping separate package.json copy; we'll copy full source for reliable workspace resolution)
 
 # Development stage
 FROM base AS development
@@ -23,14 +20,15 @@ RUN bun run generate:db
 EXPOSE 3000
 CMD ["bun", "run", "dev"]
 
-# Dependencies stage
+# Dependencies stage (copy full source to allow workspace resolution)
 FROM base AS deps
+COPY . .
 RUN bun install --frozen-lockfile
 
 # Build stage
 FROM base AS build
 
-# Copy dependencies
+# Copy dependencies from deps stage
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY . .
 
@@ -63,21 +61,24 @@ RUN groupadd -r nextjs && useradd -r -g nextjs nextjs
 
 WORKDIR /usr/src/app
 
-# Copy built application
-COPY --from=build --chown=nextjs:nextjs /usr/src/app/apps/web/.next ./apps/web/.next
+# Copy built application (standalone output)
+COPY --from=build --chown=nextjs:nextjs /usr/src/app/apps/web/.next/standalone ./
+COPY --from=build --chown=nextjs:nextjs /usr/src/app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build --chown=nextjs:nextjs /usr/src/app/apps/web/public ./apps/web/public
-COPY --from=build --chown=nextjs:nextjs /usr/src/app/apps/web/package.json ./apps/web/package.json
-COPY --from=build --chown=nextjs:nextjs /usr/src/app/package.json ./package.json
-COPY --from=build --chown=nextjs:nextjs /usr/src/app/node_modules ./node_modules
 
 # Switch to non-root user
 USER nextjs
+
+# Ensure Node binary is available (bun image provides a node fallback)
+ENV PATH="/usr/src/app/node_modules/.bin:$PATH"
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV FRONTEND_PORT=3000
 
+# Run from repo root of standalone so server resolves paths correctly
+WORKDIR /usr/src/app
 EXPOSE ${FRONTEND_PORT:-3000}
 
-# Use exec form for better signal handling
-CMD ["bun", "run", "start:frontend"]
+# Start standalone server
+CMD ["node", "apps/web/server.js"]

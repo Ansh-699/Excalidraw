@@ -11,10 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /usr/src/app
 
-# Copy package files for dependency installation
-COPY package.json bun.lockb* ./
-COPY packages/*/package.json ./packages/*/
-COPY apps/*/package.json ./apps/*/
+# (Skipping separate package.json copy; we'll copy full source for reliable workspace resolution)
 
 # Development stage
 FROM base AS development
@@ -26,8 +23,10 @@ CMD ["bun", "run", "dev"]
 
 # Build stage
 FROM base AS build
-RUN bun install --frozen-lockfile --production
+# Copy full source before installing to ensure workspaces resolve
 COPY . .
+# Install all deps to respect existing frozen lockfile
+RUN bun install --frozen-lockfile
 RUN bun run generate:db
 
 # Production stage
