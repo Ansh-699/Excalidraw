@@ -6,7 +6,7 @@ on:
 
 env:
   IMAGE_NAME: ansh7845/excalidraw-frontend
-  DOMAIN: excalidraw.anshtyagi.me
+  DOMAIN: port.ansht.tech
   BACKEND_URL: https://excalidraw.anshtyagi.me
 
 jobs: 

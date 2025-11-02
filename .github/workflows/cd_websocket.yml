@@ -6,9 +6,9 @@ on:
 
 env:
   IMAGE_NAME: ansh7845/excalidraw-websocket
-  DOMAIN: excalidraw.anshtyagi.me
-  DROPLET_IP: 142.93.223.72
-  BACKEND_URL: http://142.93.223.72:3001
+  DOMAIN: port.ansht.tech
+  DROPLET_IP:  64.227.154.117
+  BACKEND_URL: http://64.227.154.117:3001
 
 jobs:
   build:
