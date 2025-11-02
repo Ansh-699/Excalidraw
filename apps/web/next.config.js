@@ -7,7 +7,7 @@ const nextConfig = {
   },
   
   // Ensure workspace packages are transpiled
-  transpilePackages: ["@repo/common"],
+  transpilePackages: ["@repo/common", "@repo/ui"],
 
   // Optimize images and static assets
   images: {
