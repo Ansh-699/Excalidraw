@@ -5,15 +5,21 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     "next-env.d.ts",
     "next.config.js",
-    ".next/types/**/*.ts"
-, "app/signin"  ],
+    ".next/types/**/*.ts",
+    "app/signin"
+  ],
   "exclude": [
     "node_modules"
   ]
