@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { config } from "@repo/backend-common/secret";
 
 // Extend Express Request to include `userid`
@@ -20,10 +21,17 @@ export function middleware(req: Request, res: Response, next: NextFunction): voi
   }
 
   try {
+    const secretHash = crypto.createHash("sha256").update(config.jwtSecret).digest("hex").slice(0, 8);
+    console.log(`[middleware] JWT secret hash: ${secretHash}`);
     const decoded = jwt.verify(token, config.jwtSecret) as { userid: string };
     req.userid = decoded.userid;
     next();
   } catch (error) {
+    console.error("JWT verification failed:", error);
+    try {
+      const secretHash = crypto.createHash("sha256").update(config.jwtSecret).digest("hex").slice(0, 8);
+      res.setHeader("X-JWT-Hash", secretHash);
+    } catch {}
     res.status(403).send("Forbidden");
     return;
   }

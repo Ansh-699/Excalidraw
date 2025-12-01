@@ -4,16 +4,18 @@ import express, { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import cors from "cors";
+import crypto from "crypto";
 
 import { middleware } from "./middleware.js";
 import { CreateUserSchema, SigninSchema, CreateRoomSchema } from "@repo/common/types";
 import { prisma } from "@repo/db/clients";
+import { config as backendConfig } from "@repo/backend-common/secret";
 
 const app = express();
 app.use(express.json());
 
 // Configure CORS with environment variables
-const corsOrigins = process.env.CORS_ORIGINS 
+const corsOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
   : ['http://localhost:3000', 'http://localhost:3003'];
 
@@ -21,6 +23,35 @@ app.use(cors({
   origin: corsOrigins,
   credentials: true
 }));
+
+// Dev debug endpoint to compare JWT secret usage
+app.get("/debug/jwt-hash", (req: Request, res: Response): void => {
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).end();
+    return;
+  }
+  const hash = crypto.createHash("sha256").update(backendConfig.jwtSecret).digest("hex").slice(0, 8);
+  res.json({ hash });
+});
+
+app.post("/debug/verify", (req: Request, res: Response): void => {
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).end();
+    return;
+  }
+  const { token } = req.body as { token?: string };
+  const hash = crypto.createHash("sha256").update(backendConfig.jwtSecret).digest("hex").slice(0, 8);
+  if (!token) {
+    res.status(400).json({ ok: false, error: "missing token", hash });
+    return;
+  }
+  try {
+    const decoded = jwt.verify(token, backendConfig.jwtSecret);
+    res.json({ ok: true, decoded, hash });
+  } catch (e) {
+    res.status(401).json({ ok: false, error: e instanceof Error ? e.message : String(e), hash });
+  }
+});
 
 // Initialize database connection on startup
 async function initializeDatabase() {
@@ -41,15 +72,15 @@ app.get("/health", async (req: Request, res: Response): Promise<void> => {
   try {
     // Test database connection
     await prisma.$queryRaw`SELECT 1`;
-    res.status(200).json({ 
-      status: "healthy", 
+    res.status(200).json({
+      status: "healthy",
       timestamp: new Date().toISOString(),
       database: "connected"
     });
   } catch (error) {
     console.error("Health check failed:", error);
-    res.status(503).json({ 
-      status: "unhealthy", 
+    res.status(503).json({
+      status: "unhealthy",
       timestamp: new Date().toISOString(),
       database: "disconnected",
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -99,6 +130,7 @@ app.post("/signup", async (req: Request, res: Response): Promise<void> => {
 app.post("/signin", async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
+    console.log("Signin attempt:", { email, password, body: req.body });
     if (typeof email !== "string" || typeof password !== "string") {
       res.status(400).json({ error: "Email and password must be strings" });
       return;
@@ -117,18 +149,24 @@ app.post("/signin", async (req: Request, res: Response): Promise<void> => {
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.password) {
+      console.log("Signin failed: User not found or no password");
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log("Signin failed: Password mismatch");
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
-    const jwtSecret = process.env.JWT_SECRET || "anshtyagi";
-    const token = jwt.sign({ userid: user.id }, jwtSecret, { expiresIn: "1h" });
+    // Use the same centralized secret as middleware to avoid mismatches
+    const secret = backendConfig.jwtSecret;
+    const secretHash = crypto.createHash("sha256").update(secret).digest("hex").slice(0, 8);
+    console.log(`[signin] JWT secret hash: ${secretHash}`);
+    const token = jwt.sign({ userid: user.id }, secret, { expiresIn: "1h" });
+    res.setHeader("X-JWT-Hash", secretHash);
     res.status(200).json({ message: "Sign in successful", token });
   } catch (err) {
     console.error("Signin error:", err);
@@ -287,7 +325,7 @@ app.get("/shapes/:roomId", async (req: Request, res: Response): Promise<void> =>
 async function startServer() {
   // Initialize database connection first
   await initializeDatabase();
-  
+
   const PORT = process.env.HTTP_PORT ? parseInt(process.env.HTTP_PORT) : 3001;
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Backend listening on port ${PORT}`);
