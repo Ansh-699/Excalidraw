@@ -1,84 +1,33 @@
-# Multi-stage build for optimized production image
-FROM oven/bun:1 AS base
+FROM oven/bun:alpine
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    openssl \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+WORKDIR /app
 
-WORKDIR /usr/src/app
+# Copy root configuration
+COPY package.json bun.lock turbo.json ./
 
-# (Skipping separate package.json copy; we'll copy full source for reliable workspace resolution)
+# Copy package.json for all apps and packages to enable caching
+COPY apps/http-backend/package.json ./apps/http-backend/package.json
+COPY apps/web/package.json ./apps/web/package.json
+COPY apps/web-socket-backend/package.json ./apps/web-socket-backend/package.json
 
-# Development stage
-FROM base AS development
-RUN bun install --frozen-lockfile
+COPY packages/backend-common/package.json ./packages/backend-common/package.json
+COPY packages/common/package.json ./packages/common/package.json
+COPY packages/db/package.json ./packages/db/package.json
+COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
+COPY packages/typescript-config/package.json ./packages/typescript-config/package.json
+COPY packages/ui/package.json ./packages/ui/package.json
+
+# Install dependencies (cached if package.json files don't change)
+RUN bun install
+
+# Copy the rest of the source code
 COPY . .
-RUN bun run generate:db
+
+# Build the frontend
+RUN bun run build --filter=web
+
+# Expose the port
 EXPOSE 3000
-CMD ["bun", "run", "dev"]
 
-# Dependencies stage (copy full source to allow workspace resolution)
-FROM base AS deps
-COPY . .
-RUN bun install --frozen-lockfile
-
-# Build stage
-FROM base AS build
-
-# Copy dependencies from deps stage
-COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY . .
-
-# Build arguments for Next.js
-ARG NODE_ENV=production
-ARG NEXT_PUBLIC_BACKEND_URL
-ARG NEXT_PUBLIC_WEBSOCKET_URL
-
-# Set environment variables for build
-ENV NODE_ENV=$NODE_ENV
-ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
-ENV NEXT_PUBLIC_WEBSOCKET_URL=$NEXT_PUBLIC_WEBSOCKET_URL
-
-# Generate Prisma client and build
-RUN bun run generate:db
-RUN bunx turbo build --filter=web...
-
-# Production stage
-FROM oven/bun:1-slim AS production
-
-# Install only runtime dependencies
-RUN apt-get update && apt-get install -y \
-    openssl \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
-# Create non-root user for security
-RUN groupadd -r nextjs && useradd -r -g nextjs nextjs
-
-WORKDIR /usr/src/app
-
-# Copy built application (standalone output)
-COPY --from=build --chown=nextjs:nextjs /usr/src/app/apps/web/.next/standalone ./
-COPY --from=build --chown=nextjs:nextjs /usr/src/app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=build --chown=nextjs:nextjs /usr/src/app/apps/web/public ./apps/web/public
-
-# Switch to non-root user
-USER nextjs
-
-# Ensure Node binary is available (bun image provides a node fallback)
-ENV PATH="/usr/src/app/node_modules/.bin:$PATH"
-
-# Set environment variables
-ENV NODE_ENV=production
-ENV FRONTEND_PORT=3000
-
-# Run from repo root of standalone so server resolves paths correctly
-WORKDIR /usr/src/app
-EXPOSE ${FRONTEND_PORT:-3000}
-
-# Start standalone server
-CMD ["node", "apps/web/server.js"]
+# Start the application
+CMD ["bun", "run", "start:frontend"]

@@ -1,51 +1,29 @@
-# Multi-stage build for optimized production image
-FROM oven/bun:1 AS base
+FROM oven/bun:alpine AS base
+WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    openssl \
-    libssl-dev \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
-WORKDIR /usr/src/app
-
-# (Skipping separate package.json copy; we'll copy full source for reliable workspace resolution)
-
-# Development stage
-FROM base AS development
-RUN bun install --frozen-lockfile
+FROM base AS builder
+WORKDIR /app
+RUN bun install -g turbo
 COPY . .
-RUN bun run generate:db
-EXPOSE 8081
-CMD ["bun", "run", "dev"]
+RUN turbo prune web-socket-backend --docker
 
-# Build stage
-FROM base AS build
-# Copy full source before installing to ensure workspaces resolve
-COPY . .
-# Install all deps including devDependencies
-RUN bun install --frozen-lockfile
-RUN bun run generate:db
+FROM base AS installer
+WORKDIR /app
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/out/bun.lock .
+RUN bun install
 
-# Production stage
+FROM base AS sourcer
+WORKDIR /app
+COPY --from=installer /app/ .
+COPY --from=builder /app/out/full/ .
+RUN bun run generate:db
+RUN bun run build --filter=web-socket-backend...
+
 FROM base AS production
-
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-
-# Copy built application
-COPY --from=build --chown=appuser:appuser /usr/src/app .
-
-# Switch to non-root user
-USER appuser
-
-# Set environment variables
+WORKDIR /app
+COPY --from=sourcer /app/ .
 ENV NODE_ENV=production
 ENV WS_PORT=8081
-
-EXPOSE ${WS_PORT:-8081}
-
-# Use exec form for better signal handling
-CMD ["bun", "run", "start:ws"]
+EXPOSE 8081
+CMD ["bun", "apps/web-socket-backend/dist/index.js"]

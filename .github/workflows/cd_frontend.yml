@@ -1,46 +1,46 @@
-name: Deploy the frontend
+# name: Deploy the frontend
 
-on:
-  push:
-    branches: [ main ]
+# on:
+#   push:
+#     branches: [ main ]
 
-env:
-  IMAGE_NAME: ansh7845/excalidraw-frontend
-  DOMAIN: port.ansht.tech
-  BACKEND_URL: https://excalidraw.anshtyagi.me
+# env:
+#   IMAGE_NAME: ansh7845/excalidraw-frontend
+#   DOMAIN: port.ansht.tech
+#   BACKEND_URL: https://excalidraw.anshtyagi.me
 
-jobs: 
-  build:
-    runs-on: ubuntu-latest
+# jobs: 
+#   build:
+#     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout the code
-        uses: actions/checkout@v2
+#     steps:
+#       - name: Checkout the code
+#         uses: actions/checkout@v2
 
-      - name: Docker login
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#       - name: Docker login
+#         uses: docker/login-action@v2
+#         with:
+#           username: ${{ secrets.DOCKERHUB_USERNAME }}
+#           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: ./docker/docker.frontend
-          build-args: |
-            REACT_APP_BACKEND_URL=${{ env.BACKEND_URL }}
-          push: true
-          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+#       - name: Build and push Docker image
+#         uses: docker/build-push-action@v4
+#         with:
+#           context: .
+#           file: ./docker/docker.frontend
+#           build-args: |
+#             REACT_APP_BACKEND_URL=${{ env.BACKEND_URL }}
+#           push: true
+#           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      - name: Deploy to the VM
-        run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
-          chmod 600 ~/ssh_key
-          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@${{ env.DOMAIN }} -t "
-            docker stop excalidraw-frontend || true
-            docker rm excalidraw-frontend || true
-            docker run --name excalidraw-frontend -d -p 3000:3000 \
-              -e REACT_APP_BACKEND_URL=${{ env.BACKEND_URL }} \
-              ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          "
+#       - name: Deploy to the VM
+#         run: |
+#           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
+#           chmod 600 ~/ssh_key
+#           ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@${{ env.DOMAIN }} -t "
+#             docker stop excalidraw-frontend || true
+#             docker rm excalidraw-frontend || true
+#             docker run --name excalidraw-frontend -d -p 3000:3000 \
+#               -e REACT_APP_BACKEND_URL=${{ env.BACKEND_URL }} \
+#               ${{ env.IMAGE_NAME }}:${{ github.sha }}
+#           "

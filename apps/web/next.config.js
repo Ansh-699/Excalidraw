@@ -18,6 +18,11 @@ const nextConfig = {
   experimental: {
     // optimizeCss: true, // Temporarily disabled
   },
+  
+  // Set Turbopack root for workspace compatibility in Docker builds
+  turbopack: {
+    root: process.env.TURBOPACK_ROOT || process.cwd(),
+  },
 
   // Allow dev access from your droplet IP to suppress cross-origin warning
   // See: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins

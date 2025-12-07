@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack --port ${FRONTEND_PORT:-3003}",
-    "build": "next build",
+    "build": "npx next build",
     "start": "bunx --yes next start",
     "lint": "next lint --max-warnings 0",
     "check-types": "tsc --noEmit"
