@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Users, Download, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const HomePage = () => {
   const router = useRouter();
-
-  useEffect(() => { }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-purple-50 flex flex-col">

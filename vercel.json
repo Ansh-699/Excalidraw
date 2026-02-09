@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "installCommand": "corepack enable && pnpm install --no-frozen-lockfile",
+  "installCommand": "corepack enable && corepack prepare pnpm@9.12.3 --activate && pnpm install --no-frozen-lockfile",
   "ignoreCommand": "npx -y turbo-ignore web",
   "builds": [
     { "src": "apps/web/next.config.js", "use": "@vercel/next" }

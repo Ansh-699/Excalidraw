@@ -27,45 +27,15 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      // Signup user
-      const res = await axios.post(`${API_BASE_URL}/signup`, {
+      await axios.post(`${API_BASE_URL}/signup`, {
         username,
         email,
         password,
       });
 
-      const token = res.data.token;
-
-      if (!token) {
-        setError("Signup failed: No token received");
-        setLoading(false);
-        return;
-      }
-
-      localStorage.setItem("token", token);
-
-      // Create room
-      const roomRes = await axios.post(
-        `${API_BASE_URL}/room-id`,
-        { name: `My Room ${Date.now().toString().slice(-4)}` },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const roomId = roomRes.data.roomId;
-      if (!roomId) {
-        setError("Room creation failed");
-        setLoading(false);
-        return;
-      }
-
       setSuccess(true);
       setTimeout(() => {
-        router.push(`/canvas/${roomId}`);
+        router.push("/signin");
       }, 1500);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };

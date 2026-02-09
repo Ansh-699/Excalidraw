@@ -342,17 +342,6 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
     };
   }, [roomId]);
 
-  // Separate effect: update cursor whenever currentTool changes (no canvas re-init)
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    if (currentTool === "eraser") {
-      canvas.style.cursor = "crosshair";
-    } else {
-      canvas.style.cursor = "crosshair";
-    }
-  }, [currentTool]);
-
   return (
     <canvas
       ref={canvasRef}

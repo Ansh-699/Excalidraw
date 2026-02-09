@@ -22,7 +22,10 @@ RUN bun run build --filter=web-socket-backend...
 
 FROM base AS production
 WORKDIR /app
-COPY --from=sourcer /app/ .
+COPY --from=sourcer /app/node_modules ./node_modules
+COPY --from=sourcer /app/packages ./packages
+COPY --from=sourcer /app/apps/web-socket-backend ./apps/web-socket-backend
+COPY --from=sourcer /app/package.json ./
 ENV NODE_ENV=production
 ENV WS_PORT=8081
 EXPOSE 8081

@@ -1,1 +1,2 @@
-console.log("Hello via Bun!");
+export * from "./src/types";
+export * from "./src/config";

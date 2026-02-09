@@ -13,17 +13,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-// Ensure we have a valid API URL (fallback for when env vars aren't available)
-const getApiUrl = () => {
-  if (API_BASE_URL) return API_BASE_URL;
-  // Runtime fallback for browser
-  if (typeof window !== 'undefined') {
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isLocalhost ? 'http://localhost:3001' : '';
-  }
-  return 'http://localhost:3001';
-};
-
 export default function SigninPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,8 +26,7 @@ export default function SigninPage() {
     setLoading(true);
 
     try {
-      const apiUrl = getApiUrl();
-      const res = await axios.post(`${apiUrl}/signin`, {
+      const res = await axios.post(`${API_BASE_URL}/signin`, {
         email,
         password,
       });
@@ -53,7 +41,7 @@ export default function SigninPage() {
       localStorage.setItem("token", token);
 
       const roomRes = await axios.post(
-        `${apiUrl}/room-id`,
+        `${API_BASE_URL}/room-id`,
         { name: `My Room ${Date.now().toString().slice(-4)}` },
         {
           headers: {

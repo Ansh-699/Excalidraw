@@ -20,14 +20,12 @@ export function connectWebSocket(
   socket = new WebSocket(`${wsUrl}?token=${token}`);
   
   socket.onopen = () => {
-    console.log("WebSocket connected");
     if (onOpenCallback) onOpenCallback();
   };
 
   socket.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      console.log("WebSocket message received:", data);
       const handlers = messageHandlers[data.type];
       if (handlers) handlers.forEach((h) => h(data));
     } catch {
@@ -36,7 +34,7 @@ export function connectWebSocket(
   };
 
   socket.onerror = (err) => console.error("WebSocket error:", err);
-  socket.onclose = () => console.log("WebSocket disconnected");
+  socket.onclose = () => {};
 }
 
 export function sendMessage(data: any) {

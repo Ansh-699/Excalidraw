@@ -6,12 +6,10 @@
   "devDependencies": {
     "@repo/typescript-config": "workspace:^",
     "@types/bun": "latest",
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.18",
     "@types/express": "^5.0.2",
-    "@types/jsonwebtoken": "^9.0.9",
-    "express": "^5.1.0",
-    "@repo/backend-common": "workspace:^",
-    "@repo/common": "workspace:^",
-    "@repo/db": "workspace:^"
+    "@types/jsonwebtoken": "^9.0.9"
   },
   "scripts": {
     "build": "tsc --b",
@@ -22,10 +20,12 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@types/bcrypt": "^5.0.2",
-    "@types/cors": "^2.8.18",
+    "@repo/backend-common": "workspace:^",
+    "@repo/common": "workspace:^",
+    "@repo/db": "workspace:^",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
+    "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2"
   }
 }
