@@ -1,24 +1,32 @@
 // utils/socket.ts
 
-// Lazy load config to avoid bundle delays
 const getWebSocketUrl = () => {
-  const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
-  const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || (isProduction ? 'wss://excalidraw.anshtyagi.me/ws' : 'ws://localhost:8081');
-  return wsUrl;
+  if (process.env.NEXT_PUBLIC_WEBSOCKET_URL) {
+    return process.env.NEXT_PUBLIC_WEBSOCKET_URL;
+  }
+  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    return "ws://localhost:8081";
+  }
+  // In production NEXT_PUBLIC_WEBSOCKET_URL must be set.
+  return "";
 };
 
 let socket: WebSocket | null = null;
 const messageHandlers: { [type: string]: ((data: any) => void)[] } = {};
 
-export function connectWebSocket(
-  token: string,
-  onOpenCallback?: () => void
-) {
+export function connectWebSocket(token: string, onOpenCallback?: () => void) {
   if (socket && socket.readyState <= 1) return;
 
   const wsUrl = getWebSocketUrl();
+  if (!wsUrl) {
+    console.error(
+      "WebSocket URL not configured. Set NEXT_PUBLIC_WEBSOCKET_URL."
+    );
+    return;
+  }
+
   socket = new WebSocket(`${wsUrl}?token=${token}`);
-  
+
   socket.onopen = () => {
     if (onOpenCallback) onOpenCallback();
   };

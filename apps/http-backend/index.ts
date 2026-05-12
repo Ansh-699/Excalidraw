@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
@@ -183,58 +184,6 @@ app.get("/chats/:roomId", async (req: Request, res: Response): Promise<void> => 
     res.json({ messages: [] });
   }
 });
-
-/**
- * POST /chats/:roomId
- * Saves a new drawing (shape) into the chat table. Requires valid JWT (middleware).
- */
-app.post(
-  "/chats/:roomId",
-  middleware,
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      if (!req.userid) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-      }
-
-      const roomId = req.params.roomId;
-      const { shape } = req.body as { shape: unknown };
-      if (!shape) {
-        res.status(400).json({ error: "Shape payload missing" });
-        return;
-      }
-
-      // Ensure room exists (or create if missing)
-      let room = await prisma.room.findUnique({ where: { id: roomId } });
-      if (!room) {
-        room = await prisma.room.create({
-          data: {
-            id: roomId,
-            slug: roomId || `room-${Date.now()}`,
-            adminId: req.userid,
-          },
-        });
-      }
-
-      // Save the shape in chat table
-      const chatEntry = await prisma.chat.create({
-        data: {
-          roomId: room.id,
-          shape,
-          userId: req.userid,
-          message: "", // No text message here
-        },
-      });
-
-      // Respond with the newly created entry
-      res.status(201).json({ id: chatEntry.id, shape: chatEntry.shape });
-    } catch (e) {
-      console.error("Error saving shape to chat:", e);
-      res.status(500).json({ error: "Failed to save shape" });
-    }
-  }
-);
 
 /**
  * GET /room/:slug

@@ -4,10 +4,31 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Users, Download, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const HomePage = () => {
   const router = useRouter();
+
+  const handleStartDrawing = () => {
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("token");
+    if (token) {
+      // Already signed in — drop straight into a fresh canvas.
+      const roomId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `room-${Date.now()}`;
+      router.push(`/canvas/${roomId}`);
+    } else {
+      router.push("/signup");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-purple-50 flex flex-col">
@@ -44,14 +65,14 @@ const HomePage = () => {
             <span className="gradient-text">your team</span>
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-            Create beautiful diagrams, wireframes, and sketches together in
-            real-time. Perfect for brainstorming, planning, and visual
-            collaboration.
+            Create diagrams, wireframes, and sketches together in real-time.
+            Sign up, share the room link, and draw together.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-12 justify-center">
             <Button
               size="lg"
+              onClick={handleStartDrawing}
               className="text-lg px-8 bg-gradient-to-r from-primary-600 to-secondary-600 hover:shadow-glow transition-all duration-300 hover:-translate-y-1 animate-bounce-in"
             >
               <Sparkles className="w-5 h-5 mr-2" />
@@ -60,9 +81,10 @@ const HomePage = () => {
             <Button
               variant="outline"
               size="lg"
+              onClick={() => router.push("/signin")}
               className="text-lg px-8 border-2 border-primary-200 text-primary-600 hover:bg-primary-50 hover:border-primary-300 transition-all duration-300 hover:-translate-y-1 animate-slide-up"
             >
-              View Demo
+              Sign In
             </Button>
           </div>
 
@@ -71,8 +93,12 @@ const HomePage = () => {
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl h-64 flex items-center justify-center border-2 border-dashed border-gray-300">
               <div className="text-center">
                 <Palette className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 text-lg font-medium">Canvas Preview</p>
-                <p className="text-gray-400 text-sm mt-1">Your creative space awaits</p>
+                <p className="text-gray-500 text-lg font-medium">
+                  Canvas Preview
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Rectangles, circles, triangles, freehand, and eraser — synced live
+                </p>
               </div>
             </div>
           </Card>
@@ -92,11 +118,12 @@ const HomePage = () => {
                 <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-glow transition-all duration-300">
                   <Sparkles className="w-8 h-8 text-primary-600" />
                 </div>
-                <CardTitle className="text-xl">Infinite Canvas</CardTitle>
+                <CardTitle className="text-xl">Multi-tool canvas</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="leading-relaxed">
-                  Draw without limits on an infinite canvas that scales with your ideas and creativity.
+                  Draw with rectangles, circles, triangles, freehand pencil,
+                  colors, stroke widths, and an eraser.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -106,11 +133,12 @@ const HomePage = () => {
                 <div className="w-16 h-16 bg-gradient-to-br from-secondary-100 to-secondary-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-glow transition-all duration-300">
                   <Users className="w-8 h-8 text-secondary-600" />
                 </div>
-                <CardTitle className="text-xl">Real-time Collaboration</CardTitle>
+                <CardTitle className="text-xl">Real-time rooms</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="leading-relaxed">
-                  Work together seamlessly with your team in real-time, no matter where you are.
+                  Share a room link and draw together over WebSockets — every
+                  stroke is persisted to Postgres.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -120,11 +148,12 @@ const HomePage = () => {
                 <div className="w-16 h-16 bg-gradient-to-br from-success-100 to-success-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-glow transition-all duration-300">
                   <Download className="w-8 h-8 text-success-600" />
                 </div>
-                <CardTitle className="text-xl">Export & Share</CardTitle>
+                <CardTitle className="text-xl">Undo / Redo</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="leading-relaxed">
-                  Export your drawings in multiple formats and share them easily with anyone.
+                  Ctrl+Z to undo, Ctrl+Shift+Z (or Ctrl+Y) to redo — changes
+                  broadcast across the room.
                 </CardDescription>
               </CardContent>
             </Card>

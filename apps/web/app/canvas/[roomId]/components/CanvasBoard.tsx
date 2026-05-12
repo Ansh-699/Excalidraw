@@ -11,13 +11,14 @@ import {
   DrawingShape,
   drawAllShapes,
   getExistingShapes,
-  postShape,
   createShapeId,
 } from "../utils/shapes";
 
 interface CanvasBoardProps {
   roomId: string;
-  currentTool: ShapeType | "eraser";
+  currentTool: ShapeType;
+  strokeColor: string;
+  strokeWidth: number;
 }
 
 function isPointInShape(x: number, y: number, shape: DrawingShape): boolean {
@@ -25,7 +26,7 @@ function isPointInShape(x: number, y: number, shape: DrawingShape): boolean {
     for (const p of shape.points || []) {
       const dx = p.x - x;
       const dy = p.y - y;
-      if (Math.sqrt(dx * dx + dy * dy) < 5) return true;
+      if (Math.sqrt(dx * dx + dy * dy) < 8) return true;
     }
     return false;
   } else {
@@ -42,13 +43,15 @@ function isPointInShape(x: number, y: number, shape: DrawingShape): boolean {
   }
 }
 
-// Helper function to get coordinates from mouse or touch events
-function getEventCoords(e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) {
+function getEventCoords(
+  e: MouseEvent | TouchEvent,
+  canvas: HTMLCanvasElement
+) {
   const rect = canvas.getBoundingClientRect();
-  let clientX: number, clientY: number;
-  
-  if ('touches' in e) {
-    // Touch event
+  let clientX: number;
+  let clientY: number;
+
+  if ("touches" in e) {
     if (e.touches.length > 0) {
       clientX = e.touches[0]!.clientX;
       clientY = e.touches[0]!.clientY;
@@ -59,64 +62,94 @@ function getEventCoords(e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) {
       return { x: 0, y: 0 };
     }
   } else {
-    // Mouse event
     clientX = e.clientX;
     clientY = e.clientY;
   }
-  
-  return {
-    x: clientX - rect.left,
-    y: clientY - rect.top
-  };
+
+  return { x: clientX - rect.left, y: clientY - rect.top };
 }
 
-export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
+export default function CanvasBoard({
+  roomId,
+  currentTool,
+  strokeColor,
+  strokeWidth,
+}: CanvasBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const shapesRef = useRef<DrawingShape[]>([]);
-  const currentToolRef = useRef<ShapeType | "eraser">(currentTool);
+  const currentToolRef = useRef<ShapeType>(currentTool);
+  const strokeColorRef = useRef<string>(strokeColor);
+  const strokeWidthRef = useRef<number>(strokeWidth);
 
-  // Keep the ref up-to-date whenever currentTool changes:
+  // Undo/redo stacks hold shapes the local user drew (or erased) so
+  // Ctrl+Z and Ctrl+Shift+Z can walk backward/forward.
+  const undoStackRef = useRef<DrawingShape[]>([]);
+  const redoStackRef = useRef<DrawingShape[]>([]);
+
+  // Keep refs in sync with the latest props so the mouse handlers
+  // installed inside the main effect always see current values.
   useEffect(() => {
     currentToolRef.current = currentTool;
   }, [currentTool]);
+  useEffect(() => {
+    strokeColorRef.current = strokeColor;
+  }, [strokeColor]);
+  useEffect(() => {
+    strokeWidthRef.current = strokeWidth;
+  }, [strokeWidth]);
 
-  // Effect: initialize canvas, WebSocket, and event listeners ONCE per roomId
   useEffect(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
 
-    // Prevent default touch behaviors (scrolling, zooming)
+    const redrawAll = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawAllShapes(ctx, shapesRef.current);
+    };
+
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      redrawAll();
+    };
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
     canvas.style.touchAction = "none";
 
-    // Join WebSocket room
+    // Join WebSocket room.
     const token = localStorage.getItem("token") || "";
     connectWebSocket(token, () => {
       sendMessage({ type: "join_room", roomId });
     });
 
-    // Fetch existing shapes from backend and draw them
-    getExistingShapes(roomId).then((existing) => {
-      shapesRef.current = existing;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawAllShapes(ctx, shapesRef.current);
-    });
-  
-    // When a WebSocket message arrives, update shapesRef and redraw
+    // Seed from HTTP as a fallback; WS existing_shapes will overwrite if the
+    // socket connects quickly.
+    getExistingShapes(roomId)
+      .then((existing) => {
+        shapesRef.current = existing;
+        redrawAll();
+      })
+      .catch(() => {
+        /* non-fatal: ws will fill in */
+      });
+
     const handleIncoming = (data: any) => {
       if (data.roomId !== roomId) return;
       if (data.type === "drawing" && data.shape) {
-        shapesRef.current.push(data.shape);
+        // Skip our own echo if we already have it locally (avoid duplicates).
+        const exists = shapesRef.current.some((s) => s.id === data.shape.id);
+        if (!exists) shapesRef.current.push(data.shape);
       }
       if (data.type === "existing_shapes" && Array.isArray(data.shapes)) {
         shapesRef.current = data.shapes;
       }
       if (data.type === "erase_shape" && data.shapeId) {
-        shapesRef.current = shapesRef.current.filter((s) => s.id !== data.shapeId);
+        shapesRef.current = shapesRef.current.filter(
+          (s) => s.id !== data.shapeId
+        );
       }
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawAllShapes(ctx, shapesRef.current);
+      redrawAll();
     };
     onMessageType("drawing", handleIncoming);
     onMessageType("existing_shapes", handleIncoming);
@@ -126,29 +159,22 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
     let startX = 0;
     let startY = 0;
 
-    const redrawAll = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawAllShapes(ctx, shapesRef.current);
-    };
-
-    // UNIFIED START HANDLER (mouse down / touch start)
     const handleStart = (e: MouseEvent | TouchEvent) => {
-      e.preventDefault(); // Prevent default touch behaviors
-      const coords = getEventCoords(e, canvas);
-      const x = coords.x;
-      const y = coords.y;
+      e.preventDefault();
+      const { x, y } = getEventCoords(e, canvas);
       startX = x;
       startY = y;
 
       const tool = currentToolRef.current;
       if (tool === "eraser") {
-        // Erase any shape under the cursor
         const erased = shapesRef.current.filter((shape) =>
           isPointInShape(x, y, shape)
         );
         if (!erased.length) return;
         const erasedIds = erased.map((s) => s.id);
-        shapesRef.current = shapesRef.current.filter((s) => !erasedIds.includes(s.id));
+        shapesRef.current = shapesRef.current.filter(
+          (s) => !erasedIds.includes(s.id)
+        );
         erasedIds.forEach((shapeId) => {
           sendMessage({ type: "erase_shape", roomId, shapeId });
         });
@@ -156,44 +182,44 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
         return;
       }
 
-      // Otherwise, start drawing
       drawing = true;
       if (tool === "pencil") {
         shapesRef.current.push({
           id: createShapeId(),
           type: "pencil",
           points: [{ x, y }],
+          strokeColor: strokeColorRef.current,
+          strokeWidth: strokeWidthRef.current,
         });
       }
     };
 
-    // UNIFIED MOVE HANDLER (mouse move / touch move)
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!drawing) return;
-      e.preventDefault(); // Prevent scrolling on touch
-      
-      const coords = getEventCoords(e, canvas);
-      const x = coords.x;
-      const y = coords.y;
+      e.preventDefault();
+
+      const { x, y } = getEventCoords(e, canvas);
       const tool = currentToolRef.current;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawAllShapes(ctx, shapesRef.current);
+      redrawAll();
 
       if (tool === "pencil") {
-        // Extend the pencil stroke
         const last = shapesRef.current.at(-1);
         if (last && last.type === "pencil" && last.points) {
           last.points.push({ x, y });
           drawAllShapes(ctx, [last]);
         }
       } else if (tool !== "eraser") {
-        // Draw a temporary preview shape for rectangle, circle, or triangle
+        const base = {
+          id: createShapeId(),
+          strokeColor: strokeColorRef.current,
+          strokeWidth: strokeWidthRef.current,
+        };
         let tempShape: DrawingShape;
         switch (tool) {
           case "rectangle":
             tempShape = {
-              id: createShapeId(),
+              ...base,
               type: "rectangle",
               x: startX,
               y: startY,
@@ -201,11 +227,12 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
               height: y - startY,
             };
             break;
-
           case "circle": {
-            const radius = Math.sqrt((x - startX) ** 2 + (y - startY) ** 2);
+            const radius = Math.sqrt(
+              (x - startX) ** 2 + (y - startY) ** 2
+            );
             tempShape = {
-              id: createShapeId(),
+              ...base,
               type: "circle",
               x: startX - radius,
               y: startY - radius,
@@ -214,10 +241,9 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
             };
             break;
           }
-
           case "triangle":
             tempShape = {
-              id: createShapeId(),
+              ...base,
               type: "triangle",
               x: startX,
               y: startY,
@@ -225,10 +251,9 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
               height: y - startY,
             };
             break;
-
           default:
             tempShape = {
-              id: createShapeId(),
+              ...base,
               type: "rectangle",
               x: startX,
               y: startY,
@@ -240,7 +265,6 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       }
     };
 
-    // UNIFIED END HANDLER (mouse up / touch end)
     const handleEnd = (e: MouseEvent | TouchEvent) => {
       if (!drawing) return;
       e.preventDefault();
@@ -248,20 +272,22 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
       const tool = currentToolRef.current;
       if (tool === "eraser") return;
 
-      const coords = getEventCoords(e, canvas);
-      const endX = coords.x;
-      const endY = coords.y;
+      const { x: endX, y: endY } = getEventCoords(e, canvas);
 
       let newShape: DrawingShape;
       if (tool === "pencil") {
-        // Already added the first point on start; just take last pencil stroke
+        // Already added on start; keep the last one.
         newShape = shapesRef.current.at(-1)!;
       } else {
-        // Rectangle / Circle / Triangle
+        const base = {
+          id: createShapeId(),
+          strokeColor: strokeColorRef.current,
+          strokeWidth: strokeWidthRef.current,
+        };
         switch (tool) {
           case "rectangle":
             newShape = {
-              id: createShapeId(),
+              ...base,
               type: "rectangle",
               x: startX,
               y: startY,
@@ -269,11 +295,12 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
               height: endY - startY,
             };
             break;
-
           case "circle": {
-            const radius = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+            const radius = Math.sqrt(
+              (endX - startX) ** 2 + (endY - startY) ** 2
+            );
             newShape = {
-              id: createShapeId(),
+              ...base,
               type: "circle",
               x: startX - radius,
               y: startY - radius,
@@ -282,10 +309,9 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
             };
             break;
           }
-
           case "triangle":
             newShape = {
-              id: createShapeId(),
+              ...base,
               type: "triangle",
               x: startX,
               y: startY,
@@ -293,10 +319,9 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
               height: endY - startY,
             };
             break;
-
           default:
             newShape = {
-              id: createShapeId(),
+              ...base,
               type: "rectangle",
               x: startX,
               y: startY,
@@ -307,35 +332,64 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
         shapesRef.current.push(newShape);
       }
 
+      // Broadcast to peers; the WS backend is the single source of truth for
+      // persistence (no extra HTTP call here to avoid duplicate DB rows).
       sendMessage({ type: "drawing", roomId, shape: newShape });
-      postShape(roomId, newShape).catch(console.error);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawAllShapes(ctx, shapesRef.current);
+      // Track for undo and invalidate any pending redo.
+      undoStackRef.current.push(newShape);
+      redoStackRef.current = [];
+
+      redrawAll();
     };
 
-    // Attach both mouse and touch event listeners
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const metaOrCtrl = e.metaKey || e.ctrlKey;
+      if (!metaOrCtrl) return;
+
+      const key = e.key.toLowerCase();
+      const isUndo = key === "z" && !e.shiftKey;
+      const isRedo = (key === "z" && e.shiftKey) || key === "y";
+
+      if (isUndo) {
+        e.preventDefault();
+        const last = undoStackRef.current.pop();
+        if (!last) return;
+        redoStackRef.current.push(last);
+        shapesRef.current = shapesRef.current.filter((s) => s.id !== last.id);
+        sendMessage({ type: "erase_shape", roomId, shapeId: last.id });
+        redrawAll();
+      } else if (isRedo) {
+        e.preventDefault();
+        const last = redoStackRef.current.pop();
+        if (!last) return;
+        undoStackRef.current.push(last);
+        shapesRef.current.push(last);
+        sendMessage({ type: "drawing", roomId, shape: last });
+        redrawAll();
+      }
+    };
+
     canvas.addEventListener("mousedown", handleStart);
     canvas.addEventListener("mousemove", handleMove);
     canvas.addEventListener("mouseup", handleEnd);
-    
-    // Touch events
     canvas.addEventListener("touchstart", handleStart);
     canvas.addEventListener("touchmove", handleMove);
     canvas.addEventListener("touchend", handleEnd);
+    window.addEventListener("keydown", handleKeyDown);
 
-    // Initial draw
     redrawAll();
 
     return () => {
-      // Cleanup both mouse and touch events
       canvas.removeEventListener("mousedown", handleStart);
       canvas.removeEventListener("mousemove", handleMove);
       canvas.removeEventListener("mouseup", handleEnd);
       canvas.removeEventListener("touchstart", handleStart);
       canvas.removeEventListener("touchmove", handleMove);
       canvas.removeEventListener("touchend", handleEnd);
-      
+      window.removeEventListener("resize", resizeCanvas);
+      window.removeEventListener("keydown", handleKeyDown);
+
       offMessageType("drawing", handleIncoming);
       offMessageType("existing_shapes", handleIncoming);
       offMessageType("erase_shape", handleIncoming);
@@ -345,10 +399,10 @@ export default function CanvasBoard({ roomId, currentTool }: CanvasBoardProps) {
   return (
     <canvas
       ref={canvasRef}
-      style={{ 
-        display: "block", 
+      style={{
+        display: "block",
         cursor: "crosshair",
-        touchAction: "none" // Prevent default touch behaviors
+        touchAction: "none",
       }}
     />
   );
