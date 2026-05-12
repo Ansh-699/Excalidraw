@@ -1,8 +1,7 @@
 {
-  "version": 2,
-  "installCommand": "corepack enable && corepack prepare pnpm@9.12.3 --activate && pnpm install --no-frozen-lockfile",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "bun install --no-frozen-lockfile",
+  "buildCommand": "cd ../.. && bun run build --filter=web",
   "ignoreCommand": "npx -y turbo-ignore web",
-  "builds": [
-    { "src": "apps/web/next.config.js", "use": "@vercel/next" }
-  ]
+  "framework": "nextjs"
 }

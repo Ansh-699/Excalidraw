@@ -1,84 +1,88 @@
-# Turborepo starter
+# Excalidraw
 
-This Turborepo starter is maintained by the Turborepo core team.
+A real-time collaborative drawing board. Create a room, share the link, and sketch together — rectangles, circles, triangles, freehand pencil, eraser, colors, stroke widths, and undo / redo, all synced over WebSockets and persisted to Postgres.
 
-## Using this example
+## Stack
 
-Run the following command:
+- **Frontend** — Next.js 15 (App Router) + TypeScript + Tailwind v4 + shadcn/ui, on a `<canvas>`
+- **HTTP backend** — Bun + Express, JWT auth (signup / signin / rooms)
+- **WebSocket backend** — Bun + `ws`, handles `join_room`, `drawing`, `erase_shape`
+- **Database** — Postgres via Prisma (`User`, `Room`, `Chat` with a `shape: Json?` column)
+- **Monorepo** — Turborepo, Bun workspaces
 
-```sh
-npx create-turbo@latest
-```
-
-## What's inside?
-
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
+## Layout
 
 ```
-cd my-turborepo
-pnpm build
+apps/
+  web/                 Next.js frontend
+  http-backend/        Express HTTP API (port 3001)
+  web-socket-backend/  WebSocket server  (port 8081)
+packages/
+  db/                  Prisma schema + client
+  common/              Shared types (zod) + env config
+  backend-common/      Shared JWT secret loader
+  ui/ eslint-config/ typescript-config/
+docker/
+  docker.backend       Railway image for http-backend
+  docker.websocket     Railway image for web-socket-backend
 ```
 
-### Develop
+## Local development
 
-To develop all apps and packages, run the following command:
+Prereqs: [Bun](https://bun.sh) ≥ 1.2, a Postgres database (a free [Neon](https://neon.tech) project works great).
 
-```
-cd my-turborepo
-pnpm dev
-```
+```bash
+# 1. clone + install
+git clone https://github.com/Ansh-699/Excalidraw
+cd Excalidraw
+bun install
 
-### Remote Caching
+# 2. configure env
+cp .env.example .env
+# edit .env — at minimum fill in DATABASE_URL and JWT_SECRET
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+# 3. generate prisma client + apply migrations
+bun run generate:db
+cd packages/db && bunx prisma migrate deploy && cd ../..
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-npx turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-npx turbo link
+# 4. run everything
+bun run dev
 ```
 
-## Useful Links
+Opens the frontend on <http://localhost:3003>, HTTP backend on 3001, WS on 8081.
 
-Learn more about the power of Turborepo:
+Run individual services:
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+```bash
+bun run start:frontend   # only the Next.js app
+bun run start:backend    # only the HTTP API
+bun run start:ws         # only the WebSocket server
+```
+
+## Deployment
+
+Shipped as:
+
+- **Vercel** — `apps/web` (Next.js frontend)
+- **Railway** — `apps/http-backend` and `apps/web-socket-backend` (two services, separate Dockerfiles in `docker/`)
+- **Neon** — managed Postgres
+
+See the top-level `.env.example` for the full list of environment variables. Set them in Vercel and Railway via each dashboard; never commit a filled-in `.env`.
+
+Rough steps:
+
+1. Create a Neon project, copy the connection string into `DATABASE_URL`.
+2. On Railway, create two services from this repo — one pointing at `docker/docker.backend`, one at `docker/docker.websocket`. Set `DATABASE_URL`, `JWT_SECRET`, and `CORS_ORIGINS` on both.
+3. On Vercel, import the repo. Root directory stays at `/`; Vercel reads `vercel.json`. Add `NEXT_PUBLIC_BACKEND_URL` and `NEXT_PUBLIC_WEBSOCKET_URL` pointing at your Railway public URLs.
+4. Push to `main`. Vercel and Railway redeploy automatically; GitHub Actions runs `check-types` + `build` on PRs.
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl/Cmd + Z` | Undo your last shape (broadcast to room) |
+| `Ctrl/Cmd + Shift + Z` / `Ctrl + Y` | Redo |
+
+## License
+
+MIT
