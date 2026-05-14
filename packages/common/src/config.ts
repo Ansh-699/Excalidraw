@@ -1,18 +1,16 @@
 // Environment configuration
+//
+// IMPORTANT: Next.js performs *literal* compile-time replacement of
+// `process.env.NEXT_PUBLIC_*`. Any dynamic lookup (e.g. process.env[key])
+// is NOT replaced and will be undefined in the browser bundle. Always
+// reference each var by its full literal name below.
 
-const getEnvVar = (key: string): string | undefined => {
-  if (typeof process !== 'undefined' && process.env) {
-    return process.env[key];
-  }
-  return undefined;
+const getBackendUrl = (): string => {
+  return process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 };
 
-const getBackendUrl = () => {
-  return getEnvVar('NEXT_PUBLIC_BACKEND_URL') || getEnvVar('BACKEND_URL') || 'http://localhost:3001';
-};
-
-const getWebSocketUrl = () => {
-  return getEnvVar('NEXT_PUBLIC_WEBSOCKET_URL') || getEnvVar('WEBSOCKET_URL') || 'ws://localhost:8081';
+const getWebSocketUrl = (): string => {
+  return process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8081";
 };
 
 export const getConfig = () => ({
@@ -22,7 +20,6 @@ export const getConfig = () => ({
   API_BASE_URL: getBackendUrl(),
 });
 
-// Named exports for direct imports
 export const API_BASE_URL = getBackendUrl();
 export const WEBSOCKET_URL = getWebSocketUrl();
 export const WEBSOCKET_URL_SECURE = getWebSocketUrl();
