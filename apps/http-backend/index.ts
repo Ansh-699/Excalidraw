@@ -1,4 +1,3 @@
-import "dotenv/config";
 import express, { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
@@ -17,9 +16,13 @@ const corsOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
   : ['http://localhost:3000', 'http://localhost:3003'];
 
+const allowAll = corsOrigins.includes('*');
+
 app.use(cors({
-  origin: corsOrigins,
-  credentials: true
+  // Browsers reject `Access-Control-Allow-Origin: *` together with credentials,
+  // so when CORS_ORIGINS=*, drop credentials and reflect the request's origin.
+  origin: allowAll ? true : corsOrigins,
+  credentials: !allowAll,
 }));
 
 // Initialize database connection on startup
