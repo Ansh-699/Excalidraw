@@ -2,15 +2,15 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Users, Download, Palette } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Sparkles,
+  Users,
+  Undo2,
+  Palette,
+  ArrowRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { LiquidGlassCard } from "@/components/ui/liquid-weather-glass";
 
 const HomePage = () => {
   const router = useRouter();
@@ -19,7 +19,6 @@ const HomePage = () => {
     if (typeof window === "undefined") return;
     const token = localStorage.getItem("token");
     if (token) {
-      // Already signed in — drop straight into a fresh canvas.
       const roomId =
         typeof crypto !== "undefined" && "randomUUID" in crypto
           ? crypto.randomUUID()
@@ -31,133 +30,164 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-purple-50 flex flex-col">
+    <div className="bg-noise relative min-h-screen overflow-hidden">
       {/* Header */}
-      <header className="flex justify-between items-center p-6 lg:p-8">
+      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-6 lg:py-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center shadow-lg">
-            <Palette className="w-6 h-6 text-white" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/[0.04]">
+            <Palette className="h-5 w-5 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">DrawBoard</h1>
+          <span className="text-lg font-semibold tracking-tight text-white">
+            DrawBoard
+          </span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             onClick={() => router.push("/signin")}
-            className="text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+            className="text-white/80 hover:bg-white/[0.06] hover:text-white"
           >
-            Sign In
+            Sign in
           </Button>
           <Button
             onClick={() => router.push("/signup")}
-            className="bg-gradient-to-r from-primary-600 to-secondary-600 hover:shadow-glow transition-all duration-300 hover:-translate-y-1"
+            className="bg-white text-black hover:bg-white/90"
           >
-            Sign Up
+            Sign up
           </Button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <div className="animate-fade-in">
-          <h2 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Collaborate visually with{" "}
-            <span className="gradient-text">your team</span>
-          </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-            Create diagrams, wireframes, and sketches together in real-time.
-            Sign up, share the room link, and draw together.
-          </p>
+      {/* Hero */}
+      <main className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-6 pt-12 pb-24 text-center lg:pt-20">
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-xs text-white/70 animate-fade-in">
+          <Sparkles className="h-3.5 w-3.5" />
+          Real-time collaborative canvas
+        </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 mb-12 justify-center">
-            <Button
-              size="lg"
-              onClick={handleStartDrawing}
-              className="text-lg px-8 bg-gradient-to-r from-primary-600 to-secondary-600 hover:shadow-glow transition-all duration-300 hover:-translate-y-1 animate-bounce-in"
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              Start Drawing
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => router.push("/signin")}
-              className="text-lg px-8 border-2 border-primary-200 text-primary-600 hover:bg-primary-50 hover:border-primary-300 transition-all duration-300 hover:-translate-y-1 animate-slide-up"
-            >
-              Sign In
-            </Button>
-          </div>
+        <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl animate-slide-up">
+          Sketch together.
+          <br />
+          <span className="gradient-text">Synced in real time.</span>
+        </h1>
+        <p className="mx-auto mt-5 max-w-xl text-base text-white/60 lg:text-lg animate-slide-up">
+          Rectangles, circles, triangles, freehand pencil and an eraser — every
+          stroke streamed over WebSockets, persisted to Postgres.
+        </p>
 
-          {/* Feature Preview */}
-          <Card className="p-8 max-w-4xl mx-auto animate-slide-up backdrop-blur-xl border-white/20 shadow-card">
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl h-64 flex items-center justify-center border-2 border-dashed border-gray-300">
-              <div className="text-center">
-                <Palette className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 text-lg font-medium">
-                  Canvas Preview
-                </p>
-                <p className="text-gray-400 text-sm mt-1">
-                  Rectangles, circles, triangles, freehand, and eraser — synced live
-                </p>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row animate-slide-up">
+          <Button
+            size="lg"
+            onClick={handleStartDrawing}
+            className="h-11 bg-white px-6 text-base text-black hover:bg-white/90"
+          >
+            Start drawing
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => router.push("/signin")}
+            className="h-11 border-white/15 bg-white/[0.04] px-6 text-base text-white hover:border-white/25 hover:bg-white/[0.08]"
+          >
+            Sign in
+          </Button>
+        </div>
+
+        {/* Hero glass preview */}
+        <div className="mt-16 w-full max-w-3xl animate-slide-up">
+          <LiquidGlassCard
+            shadowIntensity="md"
+            glowIntensity="sm"
+            blurIntensity="xl"
+            borderRadius="20px"
+            className="bg-white/[0.04] p-1"
+          >
+            <div className="rounded-[16px] border border-white/10 bg-gradient-to-b from-white/[0.03] to-transparent p-10">
+              <div className="flex h-56 items-center justify-center rounded-xl border border-dashed border-white/15">
+                <div className="text-center">
+                  <Palette className="mx-auto mb-3 h-10 w-10 text-white/40" />
+                  <p className="text-sm font-medium text-white/70">
+                    Canvas preview
+                  </p>
+                  <p className="mt-1 text-xs text-white/40">
+                    Sign up to draw and share rooms
+                  </p>
+                </div>
               </div>
             </div>
-          </Card>
+          </LiquidGlassCard>
         </div>
       </main>
 
-      {/* Features Section */}
-      <section className="py-16 px-6">
-        <div className="max-w-6xl mx-auto">
-          <h3 className="text-3xl lg:text-4xl font-bold text-center text-gray-900 mb-12">
-            Everything you need to{" "}
-            <span className="gradient-text">visualize ideas</span>
-          </h3>
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="text-center group hover:scale-105 transition-transform duration-300 border-white/20 backdrop-blur-xl shadow-card hover:shadow-card-hover">
-              <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-glow transition-all duration-300">
-                  <Sparkles className="w-8 h-8 text-primary-600" />
-                </div>
-                <CardTitle className="text-xl">Multi-tool canvas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="leading-relaxed">
-                  Draw with rectangles, circles, triangles, freehand pencil,
-                  colors, stroke widths, and an eraser.
-                </CardDescription>
-              </CardContent>
-            </Card>
+      {/* Features */}
+      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24">
+        <div className="grid gap-5 md:grid-cols-3">
+          <LiquidGlassCard
+            shadowIntensity="sm"
+            glowIntensity="xs"
+            borderRadius="16px"
+            className="bg-white/[0.04]"
+          >
+            <div className="p-6">
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/[0.05]">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-white">
+                Multi-tool canvas
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-white/60">
+                Rectangles, circles, triangles, freehand pencil, an eraser, six
+                colors, three stroke widths.
+              </p>
+            </div>
+          </LiquidGlassCard>
 
-            <Card className="text-center group hover:scale-105 transition-transform duration-300 border-white/20 backdrop-blur-xl shadow-card hover:shadow-card-hover">
-              <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-br from-secondary-100 to-secondary-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-glow transition-all duration-300">
-                  <Users className="w-8 h-8 text-secondary-600" />
-                </div>
-                <CardTitle className="text-xl">Real-time rooms</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="leading-relaxed">
-                  Share a room link and draw together over WebSockets — every
-                  stroke is persisted to Postgres.
-                </CardDescription>
-              </CardContent>
-            </Card>
+          <LiquidGlassCard
+            shadowIntensity="sm"
+            glowIntensity="xs"
+            borderRadius="16px"
+            className="bg-white/[0.04]"
+          >
+            <div className="p-6">
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/[0.05]">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-white">
+                Real-time rooms
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-white/60">
+                Share a room link and draw together over WebSockets — strokes
+                persist in Postgres, no refresh required.
+              </p>
+            </div>
+          </LiquidGlassCard>
 
-            <Card className="text-center group hover:scale-105 transition-transform duration-300 border-white/20 backdrop-blur-xl shadow-card hover:shadow-card-hover">
-              <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-br from-success-100 to-success-200 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:shadow-glow transition-all duration-300">
-                  <Download className="w-8 h-8 text-success-600" />
-                </div>
-                <CardTitle className="text-xl">Undo / Redo</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="leading-relaxed">
-                  Ctrl+Z to undo, Ctrl+Shift+Z (or Ctrl+Y) to redo — changes
-                  broadcast across the room.
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
+          <LiquidGlassCard
+            shadowIntensity="sm"
+            glowIntensity="xs"
+            borderRadius="16px"
+            className="bg-white/[0.04]"
+          >
+            <div className="p-6">
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/[0.05]">
+                <Undo2 className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-white">
+                Undo / redo
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-white/60">
+                <kbd className="rounded border border-white/15 bg-white/5 px-1.5 py-0.5 text-xs">
+                  Ctrl
+                </kbd>{" "}
+                +{" "}
+                <kbd className="rounded border border-white/15 bg-white/5 px-1.5 py-0.5 text-xs">
+                  Z
+                </kbd>{" "}
+                to undo, broadcast across the room.
+              </p>
+            </div>
+          </LiquidGlassCard>
         </div>
       </section>
     </div>

@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { useRouter, useParams } from "next/navigation";
 import { Users, Share2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -16,13 +15,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LiquidGlassCard } from "@/components/ui/liquid-weather-glass";
 import { toast } from "sonner";
 import ToolPanel from "./components/ToolPanel";
 import type { ShapeType } from "./utils/shapes";
-import {
-  DEFAULT_STROKE_COLOR,
-  DEFAULT_STROKE_WIDTH,
-} from "./utils/shapes";
+import { DEFAULT_STROKE_COLOR, DEFAULT_STROKE_WIDTH } from "./utils/shapes";
 
 const CanvasBoard = dynamic(() => import("./components/CanvasBoard"), {
   ssr: false,
@@ -60,7 +57,7 @@ export default function RoomCanvasPage() {
   const copyRoomId = () => {
     if (roomId) {
       navigator.clipboard.writeText(roomId);
-      toast.success("Room ID copied to clipboard!");
+      toast.success("Room ID copied");
     }
   };
 
@@ -72,83 +69,104 @@ export default function RoomCanvasPage() {
 
   if (!roomId) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <Card className="p-8 text-center backdrop-blur-xl border-white/20 shadow-card">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Invalid Room</h2>
-          <p className="text-gray-600 mb-6">The room ID is missing or invalid.</p>
-          <Button
-            onClick={() => router.push("/")}
-            className="bg-gradient-to-r from-primary-600 to-secondary-600"
+      <div className="bg-noise flex min-h-screen items-center justify-center px-6">
+        <div className="w-full max-w-md">
+          <LiquidGlassCard
+            shadowIntensity="md"
+            glowIntensity="sm"
+            borderRadius="20px"
+            className="bg-white/[0.04]"
           >
-            Go Home
-          </Button>
-        </Card>
+            <div className="p-10 text-center">
+              <h2 className="text-xl font-semibold text-white">Invalid room</h2>
+              <p className="mt-2 text-sm text-white/55">
+                The room ID is missing or invalid.
+              </p>
+              <Button
+                onClick={() => router.push("/")}
+                className="mt-6 bg-white text-black hover:bg-white/90"
+              >
+                Go home
+              </Button>
+            </div>
+          </LiquidGlassCard>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-gray-50">
+    <div className="relative h-screen w-full overflow-hidden bg-[#0a0a0a]">
       {/* Top Bar */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
-        <Card className="px-4 py-2 flex items-center gap-3 backdrop-blur-xl border-white/20 shadow-md">
-          <Users className="w-4 h-4 text-gray-600" />
-          <span className="text-sm font-medium text-gray-700">
-            Room: {roomId.slice(0, 8)}...
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={copyRoomId}
-            className="h-8 w-8 p-0 hover:bg-gray-100"
-            title="Copy Room ID"
-          >
-            <Share2 className="w-4 h-4 text-gray-600" />
-          </Button>
-        </Card>
+      <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
+        <LiquidGlassCard
+          shadowIntensity="xs"
+          glowIntensity="none"
+          blurIntensity="lg"
+          borderRadius="12px"
+          className="bg-white/[0.06]"
+        >
+          <div className="flex items-center gap-2 px-3 py-2 text-sm text-white/85">
+            <Users className="h-4 w-4 text-white/60" />
+            <span className="font-medium">Room: {roomId.slice(0, 8)}…</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={copyRoomId}
+              className="h-7 w-7 p-0 text-white/70 hover:bg-white/[0.08] hover:text-white"
+              title="Copy Room ID"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </LiquidGlassCard>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button
               variant="outline"
               size="sm"
-              className="border-2 border-primary-200 text-primary-600 hover:bg-primary-50"
+              className="h-9 border-white/15 bg-white/[0.05] text-white hover:border-white/25 hover:bg-white/[0.08]"
             >
-              Join Room
+              Join room
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="border-white/10 bg-[#0f0f10] text-white sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Join Another Room</DialogTitle>
-              <DialogDescription>
-                Enter the room ID you want to join to collaborate with others.
+              <DialogTitle className="text-white">Join another room</DialogTitle>
+              <DialogDescription className="text-white/55">
+                Enter a room ID to collaborate with someone.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleJoinRoom} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="roomId">Room ID</Label>
+                <Label htmlFor="roomId" className="text-xs font-medium text-white/70">
+                  Room ID
+                </Label>
                 <Input
                   id="roomId"
-                  placeholder="Enter room ID to join"
+                  placeholder="paste a room id"
                   value={joinRoomId}
                   onChange={(e) => setJoinRoomId(e.target.value)}
                   autoFocus
+                  className="h-10 border-white/10 bg-white/[0.04] text-white placeholder:text-white/30 focus-visible:border-white/30 focus-visible:ring-white/15"
                 />
               </div>
-              <div className="flex gap-3 justify-end">
+              <div className="flex justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setDialogOpen(false)}
+                  className="border-white/15 bg-white/[0.05] text-white hover:border-white/25 hover:bg-white/[0.08]"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-gradient-to-r from-primary-600 to-secondary-600"
+                  className="bg-white text-black hover:bg-white/90"
                   disabled={!joinRoomId.trim()}
                 >
-                  Join Room
+                  Join
                 </Button>
               </div>
             </form>
@@ -159,15 +177,14 @@ export default function RoomCanvasPage() {
           variant="ghost"
           size="sm"
           onClick={handleSignOut}
-          className="h-9 px-3 text-gray-700 hover:bg-gray-100"
+          className="h-9 px-3 text-white/70 hover:bg-white/[0.08] hover:text-white"
           title="Sign out"
         >
-          <LogOut className="w-4 h-4 mr-1" />
+          <LogOut className="mr-1.5 h-4 w-4" />
           Sign out
         </Button>
       </div>
 
-      {/* Tool Panel */}
       <ToolPanel
         currentTool={tool}
         onSelectTool={setTool}
@@ -177,7 +194,6 @@ export default function RoomCanvasPage() {
         onSelectWidth={setStrokeWidth}
       />
 
-      {/* Canvas */}
       <CanvasBoard
         roomId={roomId}
         currentTool={tool}
